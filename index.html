@@ -108,6 +108,18 @@
 
     scene.add(cube)
 
+    const esferaGeo = new THREE.SphereGeometry(0.6, 32, 32);
+    const esferaMat = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+    const esfera = new THREE.Mesh(esferaGeo, esferaMat);
+    esfera.position.set(2.5, 0.2, -1);
+    scene.add(esfera);
+
+    const cilindroGeo = new THREE.CylinderGeometry(0.5, 0.5, 1, 32);
+    const cilindroMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+    const cilindro = new THREE.Mesh(cilindroGeo, cilindroMat);
+    cilindro.position.set(-2.5, 0.2, -1);
+    scene.add(cilindro);
+
     camera.position.z = 8;
     //camera.position.x = -2;
     camera.position.y = 2.5;
