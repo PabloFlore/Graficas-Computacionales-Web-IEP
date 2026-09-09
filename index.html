@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mini-Metrópolis</title>
+  <title>Pato en la Pista</title>
 
   <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
 
@@ -17,143 +17,155 @@
   }
   </script>
 
-  <style>
-    .vista {
-      display: none;
-    }
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-    .vista.activa {
-      display: block;
-    }
-  </style>
+  <link rel="stylesheet" href="css/estilos.css">
 </head>
 
 <body>
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
-  <!-- MENÚ INICIAL -->
+  <!-- MENÚ DE INICIO -->
   <section id="vista-menu" class="vista activa">
-    <h1>Mini-Metrópolis</h1>
-    <button data-vista="vista-juego">Jugar</button>
-    <button data-vista="vista-configuraciones">Configuraciones</button>
-    <button data-vista="vista-puntuaciones">Puntuaciones</button>
+    <div class="tarjeta">
+      <div class="marca">
+
+        <h1 class="marca__titulo">Pato en la Pista</h1>
+        <p class="marca__lema">Esquiva las bicicletas y llega antes que los demás.</p>
+      </div>
+
+      <button class="boton boton--primario" data-vista="vista-juego">Jugar</button>
+      <button class="boton boton--secundario" data-vista="vista-configuraciones">Configuraciones</button>
+      <button class="boton boton--terciario" data-vista="vista-puntuaciones">Puntuaciones</button>
+    </div>
   </section>
 
-  <!-- PANTALLA DE JUEGO -->
-  <section id="vista-juego" class="vista">
-    <button data-vista="vista-pausa">Pausa</button>
+  <!-- PANTALLA DE JUEGO (HUD) -->
+  <section id="vista-juego" class="vista escenario">
+    <div class="hud">
+      <div class="hud__fila">
+        <div class="hud__grupo">
+          <div class="hud__panel">
+            <div class="barra">
+              <div class="barra__riel">
+                <span class="barra__etiqueta">Vida</span>
+                <div class="barra__relleno barra__relleno--vida"></div>
+              </div>
+            </div>
+            <div class="barra">
+              <div class="barra__riel">
+                <span class="barra__etiqueta">Velocidad</span>
+                <div class="barra__relleno barra__relleno--energia"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="hud__panel marcador">
+            <div>
+              <span class="marcador__cifra">0</span>
+              <span class="marcador__texto">Esquivadas</span>
+            </div>
+          </div>
+        </div>
+
+        <button class="boton boton--hud" data-vista="vista-pausa">Pausa</button>
+      </div>
+    </div>
   </section>
 
   <!-- MENÚ DE PAUSA -->
   <section id="vista-pausa" class="vista">
-    <h2>Pausa</h2>
-    <button data-vista="vista-juego">Reanudar</button>
-    <button data-vista="vista-menu">Salir</button>
+    <div class="tarjeta tarjeta--emergente">
+      <!-- Patito dormido -->
+      <svg class="tarjeta__patito" viewBox="0 0 145 125">
+        <g stroke="#1f2430" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round">
+          <path d="M17 64 L3 55 Q8 70 3 80 L19 83 Z" fill="#ffd45e" />
+          <ellipse cx="62" cy="76" rx="45" ry="28" fill="#ffd45e" />
+          <path d="M44 68 C58 55 84 59 89 74 C76 87 52 85 44 68 Z" fill="#ffe9a8" />
+          <circle cx="101" cy="42" r="23" fill="#ffd45e" />
+          <path d="M119 36 Q139 34 140 44 Q139 54 119 51 Z" fill="#ff9d3d" />
+          <path d="M98 36 Q104 41 110 36" fill="none" />
+        </g>
+      </svg>
+
+      <h2 class="tarjeta__titulo">Pausa</h2>
+      <p class="tarjeta__nota">El pato toma aire.</p>
+
+      <button class="boton boton--primario" data-vista="vista-juego">Reanudar</button>
+      <button class="boton boton--peligro" data-vista="vista-menu">Salir</button>
+    </div>
   </section>
 
   <!-- CONFIGURACIONES -->
   <section id="vista-configuraciones" class="vista">
-    <h2>Configuraciones</h2>
-    <label>Volumen: <input type="range" id="cfg-volumen" min="0" max="100"></label>
-    <label>Sonido: <input type="checkbox" id="cfg-sonido"></label>
-    <label>Dificultad:
-      <select id="cfg-dificultad">
-        <option value="facil">Fácil</option>
-        <option value="normal">Normal</option>
-        <option value="dificil">Difícil</option>
-      </select>
-    </label>
-    <br><br>
-    <button data-vista="vista-menu">Volver</button>
+    <div class="tarjeta">
+      <h2 class="tarjeta__titulo">Configuraciones</h2>
+      <p class="tarjeta__nota">Tus ajustes se guardan en este navegador.</p>
+
+      <div class="campos">
+        <div class="campo">
+          <label class="campo__etiqueta" for="cfg-volumen">Volumen</label>
+          <div class="campo__control">
+            <span class="campo__icono">🔊</span>
+            <input type="range" id="cfg-volumen" min="0" max="100">
+          </div>
+        </div>
+
+        <div class="campo">
+          <label class="campo__etiqueta" for="cfg-sonido">Sonido</label>
+          <input type="checkbox" id="cfg-sonido">
+        </div>
+
+        <div class="campo">
+          <label class="campo__etiqueta" for="cfg-dificultad">Dificultad</label>
+          <select id="cfg-dificultad">
+            <option value="facil">Fácil</option>
+            <option value="normal">Normal</option>
+            <option value="dificil">Difícil</option>
+          </select>
+        </div>
+      </div>
+
+      <button class="boton boton--fantasma" data-vista="vista-menu">Volver</button>
+    </div>
   </section>
 
   <!-- PUNTUACIONES -->
   <section id="vista-puntuaciones" class="vista">
-    <h2>Puntuaciones</h2>
-    <table id="tabla-puntuaciones" border="1">
-      <thead>
-        <tr>
-          <th>Nombre</th>
-          <th>Puntos</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr><td>Pendiente de API</td><td>-</td></tr>
-      </tbody>
-    </table>
-    <br>
-    <button data-vista="vista-menu">Volver</button>
+    <div class="tarjeta tarjeta--ancha">
+      <h2 class="tarjeta__titulo">Puntuaciones</h2>
+      <p class="tarjeta__nota">Datos de ejemplo: la tabla se llenará desde la API de MySQL.</p>
+
+      <table class="tabla-puntos" id="tabla-puntuaciones">
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Puntos</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="medalla">1</span>Jugador uno</td>
+            <td>-</td>
+          </tr>
+          <tr>
+            <td><span class="medalla">2</span>Jugador dos</td>
+            <td>-</td>
+          </tr>
+          <tr>
+            <td><span class="medalla">3</span>Jugador tres</td>
+            <td>-</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <button class="boton boton--fantasma" data-vista="vista-menu">Volver</button>
+    </div>
   </section>
 
-  <script src="logica.js"></script>
-
-  <script type="module">
-
-    import * as THREE from 'three';
-
-    var rotarY = 10.0;
-
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-
-    const renderer = new THREE.WebGLRenderer();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-
-    const contenedorJuego = document.getElementById('vista-juego');
-    contenedorJuego.appendChild(renderer.domElement);
-
-    const geometry = new THREE.BoxGeometry(1, 1, 1);
-    const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-    const cube = new THREE.Mesh(geometry, material);
-
-    scene.add(cube)
-
-    const esferaGeo = new THREE.SphereGeometry(0.6, 32, 32);
-    const esferaMat = new THREE.MeshBasicMaterial({ color: 0x0000ff });
-    const esfera = new THREE.Mesh(esferaGeo, esferaMat);
-    esfera.position.set(2.5, 0.2, -1);
-    scene.add(esfera);
-
-    const cilindroGeo = new THREE.CylinderGeometry(0.5, 0.5, 1, 32);
-    const cilindroMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-    const cilindro = new THREE.Mesh(cilindroGeo, cilindroMat);
-    cilindro.position.set(-2.5, 0.2, -1);
-    scene.add(cilindro);
-
-    camera.position.z = 8;
-    //camera.position.x = -2;
-    camera.position.y = 2.5;
-
-    var posicionCubo = new THREE.Vector3(0, 0.2, -1);
-
-    renderer.setAnimationLoop(animate);
-
-    function animate() {
-
-      renderer.render(scene, camera);
-
-    }
-
-
-    document.addEventListener('keydown', (event) => {
-
-      if (event.key === 'a') {
-        cube.position.x -= 1;
-      }
-      if (event.key === 'd') {
-        cube.position.x += 1;
-      }
-      if (event.key === 'w') {
-        cube.position.z -= 1;
-      }
-      if (event.key === 's') {
-        cube.position.z += 1;
-      }
-
-    });
-
-
-  </script>
+  <script type="module" src="js/main.js"></script>
 </body>
 
 </html>

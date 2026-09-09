@@ -26,3 +26,6 @@ lerna-debug.log*
 # Sistema operativo
 .DS_Store
 Thumbs.db
+
+# Bitácora personal (no se sube al repositorio)
+BITACORA.md
