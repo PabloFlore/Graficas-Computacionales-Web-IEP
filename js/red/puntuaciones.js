@@ -1,4 +1,9 @@
 /**
+ * Puntuaciones y envío de scores contra el WebService PHP (Apache/MySQL).
+ */
+const API_BASE = 'http://localhost/WebServices';
+
+/**
  * Carga las puntuaciones desde el backend (PHP/MySQL) y actualiza la tabla HTML.
  */
 export async function cargarPuntuaciones() {
@@ -13,10 +18,9 @@ export async function cargarPuntuaciones() {
     `;
 
 try {
-    // Reemplazar la URL por tu endpoint de PHP real (ej. 'api/puntuaciones.php')
-    const respuesta = await fetch('/api/puntuaciones.php'); 
+    const respuesta = await fetch(`${API_BASE}/puntuaciones.php`);
     if (!respuesta.ok) throw new Error('Error al obtener datos');
-    
+
     const puntuaciones = await respuesta.json();
 
     // Limpiar tabla
@@ -53,4 +57,24 @@ try {
         </tr>
     `;
     }
+}
+
+/**
+ * Envía un score al WebService PHP (INSERT en MySQL).
+ * Devuelve true si el registro se guardó correctamente.
+ */
+export async function enviarPuntuacion(nombre, score) {
+    const datos = new URLSearchParams({
+        nombre: nombre,
+        score: score
+    });
+
+    const respuesta = await fetch(`${API_BASE}/WebServices.php?${datos.toString()}`);
+    const texto = await respuesta.text();
+
+    if (!texto.includes('Correctamente')) {
+        throw new Error(texto || 'No se pudo guardar la puntuación.');
+    }
+
+    return true;
 }

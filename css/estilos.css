@@ -217,6 +217,27 @@ h2 {
   max-width: 620px;
 }
 
+/* ---------- Formulario de envio de score ---------- */
+.formulario {
+  margin-bottom: 22px;
+  text-align: left;
+}
+
+.formulario .campo {
+  margin-bottom: 12px;
+}
+
+.formulario__campo {
+  width: 160px;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 15px;
+  color: var(--tinta);
+  background: var(--papel);
+  border: 2px solid var(--tinta);
+  border-radius: 0;
+}
+
 .tabla-puntos {
   width: 100%;
   margin-bottom: 22px;

@@ -136,7 +136,21 @@
   <section id="vista-puntuaciones" class="vista">
     <div class="tarjeta tarjeta--ancha">
       <h2 class="tarjeta__titulo">Puntuaciones</h2>
-      <p class="tarjeta__nota">Datos de ejemplo: la tabla se llenará desde la API de MySQL.</p>
+      <p class="tarjeta__nota">Guarda tu score y consulta la tabla de mejores puntuaciones.</p>
+
+      <form id="formulario" class="formulario">
+        <div class="campo">
+          <label class="campo__etiqueta" for="usuario">Nombre</label>
+          <input class="formulario__campo" type="text" id="usuario" name="nombre" placeholder="Tu nombre" autocomplete="off" required>
+        </div>
+
+        <div class="campo">
+          <label class="campo__etiqueta" for="score">Score</label>
+          <input class="formulario__campo" type="number" id="score" name="score" placeholder="0" min="0" required>
+        </div>
+
+        <button class="boton boton--primario" id="miBoton" type="submit">Guardar puntuación</button>
+      </form>
 
       <table class="tabla-puntos" id="tabla-puntuaciones">
         <thead>
@@ -145,20 +159,7 @@
             <th>Puntos</th>
           </tr>
         </thead>
-        <tbody>
-          <tr>
-            <td><span class="medalla">1</span>Jugador uno</td>
-            <td>-</td>
-          </tr>
-          <tr>
-            <td><span class="medalla">2</span>Jugador dos</td>
-            <td>-</td>
-          </tr>
-          <tr>
-            <td><span class="medalla">3</span>Jugador tres</td>
-            <td>-</td>
-          </tr>
-        </tbody>
+        <tbody></tbody>
       </table>
 
       <button class="boton boton--fantasma" data-vista="vista-menu">Volver</button>

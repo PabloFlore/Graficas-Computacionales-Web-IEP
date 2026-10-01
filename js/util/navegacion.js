@@ -1,9 +1,16 @@
 import { iniciarPreferencias } from '../config/preferencias.js';
+import { cargarPuntuaciones } from '../red/puntuaciones.js';
 
 export function mostrarVista(id) {
   document.querySelectorAll('.vista').forEach((vista) => {
     vista.classList.toggle('activa', vista.id === id);
   });
+
+  // La tabla se rellena cada vez que se entra a Puntuaciones, para
+  // reflejar los scores que se hayan guardado en esta sesión.
+  if (id === 'vista-puntuaciones') {
+    cargarPuntuaciones();
+  }
 }
 
 export function iniciarNavegacion() {
