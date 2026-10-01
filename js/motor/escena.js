@@ -25,7 +25,7 @@ export function iniciarEscena() {
     new THREE.SphereGeometry(0.6, 32, 32),
     new THREE.MeshPhongMaterial({ color: 0x0000ff })
   );
-  esfera.position.set(2.5, 0.2, -1);
+  esfera.position.set(-10, 0.2, -1);
   scene.add(esfera);
 
   const cilindro = new THREE.Mesh(
@@ -48,18 +48,18 @@ export function iniciarEscena() {
   /* ---------- Luces (como la Practica 4) ---------- */
 
   // Luz ambiental
-  const luzAmbiental = new THREE.AmbientLight(0x404040);
+  const luzAmbiental = new THREE.AmbientLight(0xffffff, 0.3);
   scene.add(luzAmbiental);
 
   // Luz direccional (frontal): lado de enfrente iluminado, trasero en sombra
-  const luzDireccional = new THREE.DirectionalLight(0x404040, 20.0);
+  const luzDireccional = new THREE.DirectionalLight(0xffffff, 1.5);
   luzDireccional.position.set(0, 0, 10);
   const helperDireccional = new THREE.DirectionalLightHelper(luzDireccional, 2);
   scene.add(luzDireccional, helperDireccional);
 
   // Luz puntual
-  const luzPuntual = new THREE.PointLight(0x888888, 10);
-  luzPuntual.position.set(-8, 4, -10);
+  const luzPuntual = new THREE.PointLight(0xff8c00, 2);
+  luzPuntual.position.set(esfera.position.x, 4, -10);
   const helperPuntual = new THREE.PointLightHelper(luzPuntual);
   scene.add(luzPuntual, helperPuntual);
 
@@ -74,12 +74,33 @@ export function iniciarEscena() {
   });
 
   // Solo se dibuja cuando la vista de juego está activa: así el
-  // bucle se detiene en el menú y durante la pausa. Sin teclas
-  // de movimiento por ahora.
+  // render se detiene en el menú y durante la pausa. El reloj se
+  // consulta igual en cada fotograma para que el tiempo pausado no
+  // se acumule y la esfera no salte de golpe al reanudar.
+  const reloj = new THREE.Clock();
+  let direccion = 1;
+  const velocidad = 2;
+  const LIMITE = 10;
+
   renderer.setAnimationLoop(animate);
 
   function animate() {
+    const delta = reloj.getDelta();
+
     if (vistaJuego.classList.contains('activa')) {
+      // Movimiento gradual y lento de la esfera entre X=-10 y X=10.
+      esfera.position.x += direccion * velocidad * delta;
+      if (esfera.position.x >= LIMITE) {
+        esfera.position.x = LIMITE;
+        direccion *= -1;
+      } else if (esfera.position.x <= -LIMITE) {
+        esfera.position.x = -LIMITE;
+        direccion *= -1;
+      }
+
+      // La luz puntual comparte la posición X de la esfera.
+      luzPuntual.position.x = esfera.position.x;
+
       renderer.render(scene, camera);
     }
   }
