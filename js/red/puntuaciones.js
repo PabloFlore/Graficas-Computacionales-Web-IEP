@@ -1,7 +1,10 @@
 /**
  * Puntuaciones y envío de scores contra el WebService PHP (Apache/MySQL).
+ *
+ * El backend corre en Apache (puerto 80), no en Express, porque el codigo
+ * PHP no puede ejecutarse desde Node. Ver api/apache-alias.conf.
  */
-const API_BASE = 'http://localhost/WebServices';
+const API_BASE = 'http://localhost/api';
 
 /**
  * Carga las puntuaciones desde el backend (PHP/MySQL) y actualiza la tabla HTML.
