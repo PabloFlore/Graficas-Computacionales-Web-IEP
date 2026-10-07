@@ -1,4 +1,4 @@
-import { enviarPuntuacion, cargarPuntuaciones } from './red/puntuaciones.js';
+import { enviarPuntuacion, cargarPuntuaciones } from './puntuaciones.js';
 
 const formulario = document.getElementById('formulario');
 const campoUsuario = document.getElementById('usuario');

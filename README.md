@@ -1,8 +1,8 @@
 # Graficas-Computacionales-Web-IEP
 
 Juego web 3D para la materia de Gráficas Computacionales Web. Interfaz HTML/CSS,
-motor 3D con Three.js, servidor Express y un WebService en PHP/MySQL para la tabla de
-puntuaciones.
+motor 3D con Three.js, servidor Express, un WebService en PHP/MySQL para la tabla de
+puntuaciones e inicio de sesión con Facebook (Meta).
 
 ---
 
@@ -103,6 +103,9 @@ PORT=8080 npm start
 └── assets/                 Modelos, texturas y audio (vacíos por ahora)
 ```
 
+El botón de inicio de sesión con Facebook (`<fb:login-button>`, `FB.init` y la carga del
+SDK) vive directamente en `index.html`, y sus estilos en `css/estilos.css`.
+
 ---
 
 ## 4. Cómo funciona la comunicación
@@ -130,7 +133,7 @@ de ejecutarlo.
 
 ```php
 define('DB_HOST', 'localhost');
-define('DB_PORT', '3307');
+define('DB_PORT', '3306');
 define('DB_USER', 'root');
 define('DB_PASS', '');
 define('DB_NAME', 'gcw');
@@ -177,6 +180,7 @@ Funciona:
 - Transición entre las cinco vistas
 - Preferencias persistentes en LocalStorage
 - WebService PHP/MySQL: guardar y leer puntuaciones
+- Inicio de sesión con Facebook (SDK JS) mostrando nombre y foto del perfil
 - Escena 3D iluminada con materiales Phong y movimiento animado
 
 Pendiente:
@@ -187,6 +191,8 @@ Pendiente:
 - **Sonido.** Las preferencias de volumen y sonido se guardan, pero no hay audio que
   reproducir ni archivos en `assets/audio`.
 - **Dificultad.** Se selecciona y se guarda, pero nada la lee todavía.
+- **Vincular Facebook con el score.** El login no rellena todavía el formulario de
+  puntuaciones ni guarda progreso por usuario.
 - **Socket.IO.** Está en `package.json` pero no se usa en el servidor ni en el cliente.
 
 ---
@@ -196,3 +202,63 @@ Pendiente:
 - El proyecto usa Three.js desde unpkg mediante `importmap`, no desde npm.
 - Los helpers `DirectionalLightHelper` y `PointLightHelper` se dibujan en pantalla a
   propósito, para poder ver las luces.
+
+---
+
+## 9. Inicio de sesión con Facebook (Meta)
+
+El menú inicial incluye un botón para iniciar sesión con Facebook mediante el **SDK de
+JavaScript**. Al autenticarse, el juego muestra el nombre y la foto del perfil.
+
+### 9.1 Datos de la app
+
+| Dato | Valor |
+|---|---|
+| App ID | `1664395638440492` |
+| Versión de Graph API | `v26.0` |
+| Permisos solicitados | `public_profile`, `email` |
+
+El **App Secret nunca se sube al repositorio**: solo se usa el App ID, que es un
+identificador de cliente y no un secreto.
+
+### 9.2 Configuración en Meta for Developers
+
+1. Entrá a [developers.facebook.com](https://developers.facebook.com) e iniciá sesión con
+   tu cuenta; si es la primera vez, completá el registro como desarrollador.
+2. Creá la app en [developers.facebook.com/apps/creation](https://developers.facebook.com/apps/creation)
+   con nombre, correo de contacto y, como caso de uso, **"Inicio de sesión con Facebook"**.
+3. En **Ajustes → Básico**, agregá `localhost` en **Dominios de la app**. Ahí mismo figura
+   el **App ID**.
+4. En **Facebook Login → Configuración**, dentro de *Configuración de OAuth del cliente*:
+   - **Inicio de sesión de OAuth web**: Sí
+   - **Usar modo estricto para URI de redireccionamiento**: Sí
+   - **Dominios permitidos para el SDK de JavaScript**: `localhost`
+   - **Inicio de sesión con el SDK de JavaScript**: Sí
+   - **URI de redireccionamiento de OAuth válidos**: `http://localhost:4000/`
+5. Guardá los cambios.
+
+### 9.3 Qué se tocó en el proyecto
+
+- `index.html`: el botón `<fb:login-button scope="public_profile,email" onlogin="checkLoginState();">`,
+  el contenedor `#sesion-facebook`, la inicialización `FB.init({ appId, cookie, xfbml, version })`
+  junto con el loader del SDK, y la función `checkLoginState()`, que consulta
+  `FB.api('/me', { fields: 'name,picture' })`, muestra la respuesta y pinta el nombre y la
+  foto.
+- `css/estilos.css`: estilos de `.facebook` y `.sesion-facebook` (foto redonda + nombre).
+
+### 9.4 Notas
+
+- La app queda en **modo desarrollo**: solo pueden iniciar sesión las cuentas con un rol
+  (administrador, desarrollador o probador). Para abrirla al público hay que pasar por la
+  App Review.
+- El aviso rojo de **"No cumple los requisitos"** (Política de privacidad y Eliminación de
+  datos de usuario) solo es necesario para **publicar** la app; no bloquea el login en modo
+  desarrollo.
+- En desarrollo se permite `http://localhost`. Si Meta rechaza el login por exigir HTTPS,
+  una alternativa es exponer el puerto con un túnel (por ejemplo ngrok).
+
+### 9.5 Evidencias de la práctica
+
+1. Captura de la app creada en Meta for Developers.
+2. Captura de la configuración de la API mostrando el App ID propio.
+3. Captura del inicio de sesión desde el botón agregado en el juego.

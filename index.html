@@ -39,6 +39,12 @@
       <button class="boton boton--primario" data-vista="vista-juego">Jugar</button>
       <button class="boton boton--secundario" data-vista="vista-configuraciones">Configuraciones</button>
       <button class="boton boton--terciario" data-vista="vista-puntuaciones">Puntuaciones</button>
+
+      <!-- Inicio de sesión con Facebook (SDK de JavaScript) -->
+      <div class="facebook">
+        <fb:login-button scope="public_profile,email" onlogin="checkLoginState();"></fb:login-button>
+        <div id="sesion-facebook" class="sesion-facebook"></div>
+      </div>
     </div>
   </section>
 
@@ -167,6 +173,71 @@
   </section>
 
   <script type="module" src="js/main.js"></script>
+
+  <!-- Facebook JS SDK: inicialización, carga del SDK y callback del botón -->
+  <script>
+    window.fbAsyncInit = function () {
+      FB.init({
+        appId: '1664395638440492',
+        cookie: true,
+        xfbml: true,
+        version: 'v26.0'
+      });
+
+      // App Events está deprecado en el SDK actual; se llama solo si existe.
+      if (FB.AppEvents && typeof FB.AppEvents.logPageView === 'function') {
+        FB.AppEvents.logPageView();
+      }
+    };
+
+    (function (d, s, id) {
+      var js, fjs = d.getElementsByTagName(s)[0];
+      if (d.getElementById(id)) { return; }
+      js = d.createElement(s); js.id = id;
+      js.src = 'https://connect.facebook.net/en_US/sdk.js';
+      fjs.parentNode.insertBefore(js, fjs);
+    }(document, 'script', 'facebook-jssdk'));
+
+    // Callback que dispara <fb:login-button>.
+    function checkLoginState() {
+      FB.api('/me', { fields: 'name,picture' }, function (response) {
+        alert(JSON.stringify(response));
+        mostrarSesionFacebook(response);
+      });
+    }
+
+    // Muestra el nombre y la foto del usuario en el menú.
+    function mostrarSesionFacebook(response) {
+      var contenedor = document.getElementById('sesion-facebook');
+      if (!contenedor) {
+        return;
+      }
+
+      contenedor.innerHTML = '';
+
+      if (!response || response.error) {
+        var error = document.createElement('p');
+        error.className = 'sesion-facebook__error';
+        error.textContent = 'No se pudo obtener el perfil de Facebook.';
+        contenedor.appendChild(error);
+        return;
+      }
+
+      var foto = response.picture && response.picture.data ? response.picture.data.url : '';
+      if (foto) {
+        var img = document.createElement('img');
+        img.className = 'sesion-facebook__foto';
+        img.src = foto;
+        img.alt = response.name || 'Usuario de Facebook';
+        contenedor.appendChild(img);
+      }
+
+      var nombre = document.createElement('span');
+      nombre.className = 'sesion-facebook__nombre';
+      nombre.textContent = response.name || '';
+      contenedor.appendChild(nombre);
+    }
+  </script>
 </body>
 
 </html>

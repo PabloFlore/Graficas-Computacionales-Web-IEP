@@ -490,3 +490,39 @@ h2 {
     width: 100%;
   }
 }
+
+/* ============================================================
+   FACEBOOK LOGIN
+   ============================================================ */
+.facebook {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: var(--borde);
+}
+
+.sesion-facebook {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.sesion-facebook__foto {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border: 2px solid var(--tinta);
+  border-radius: 50%;
+}
+
+.sesion-facebook__nombre {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.sesion-facebook__error {
+  margin: 0;
+  font-size: 13px;
+  color: #ff1c42;
+}
