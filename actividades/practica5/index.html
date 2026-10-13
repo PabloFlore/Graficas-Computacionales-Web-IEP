@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Práctica 5 — Web Service</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Courier New', monospace;
+      background: #fff;
+      color: #111;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 40px;
+      padding: 40px 20px;
+    }
+
+    header {
+      text-align: center;
+      border-bottom: 1px solid #111;
+      padding-bottom: 16px;
+      width: min(400px, 100%);
+    }
+
+    header h1 { font-size: 1rem; letter-spacing: 4px; text-transform: uppercase; }
+    header p  { font-size: 0.75rem; color: #666; margin-top: 4px; letter-spacing: 1px; }
+
+    .card {
+      width: min(400px, 100%);
+      border: 1px solid #111;
+    }
+
+    .card-title {
+      font-size: 0.7rem;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      padding: 10px 16px;
+      border-bottom: 1px solid #111;
+      color: #666;
+    }
+
+    .card-body { padding: 20px 16px; }
+
+    input {
+      display: block;
+      width: 100%;
+      padding: 10px 0;
+      border: none;
+      border-bottom: 1px solid #ccc;
+      font-family: inherit;
+      font-size: 0.95rem;
+      background: transparent;
+      outline: none;
+      margin-bottom: 16px;
+      transition: border-color 0.15s;
+    }
+
+    input:focus { border-bottom-color: #111; }
+
+    .actions { display: flex; gap: 8px; margin-top: 8px; }
+
+    button {
+      flex: 1;
+      padding: 10px;
+      font-family: inherit;
+      font-size: 0.8rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      cursor: pointer;
+      border: 1px solid #111;
+      background: #111;
+      color: #fff;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    button:hover { background: #fff; color: #111; }
+
+    #btn-ver {
+      background: #fff;
+      color: #111;
+    }
+
+    #btn-ver:hover { background: #111; color: #fff; }
+
+    #respuesta {
+      margin-top: 14px;
+      font-size: 0.8rem;
+      letter-spacing: 1px;
+      min-height: 18px;
+      color: #444;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    thead tr { border-bottom: 1px solid #111; }
+    tbody tr { border-bottom: 1px solid #eee; }
+    th, td { padding: 10px 8px; text-align: left; }
+    th { font-size: 0.7rem; letter-spacing: 2px; text-transform: uppercase; color: #666; font-weight: normal; }
+    td:first-child { color: #bbb; width: 32px; }
+
+    #tabla-scores { display: none; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Práctica 5</h1>
+    <p>Web Service — PHP + MySQL</p>
+  </header>
+
+  <div class="card">
+    <div class="card-title">Registrar puntaje</div>
+    <div class="card-body">
+      <form id="formulario">
+        <input type="text" id="usuario" placeholder="Usuario" autocomplete="off">
+        <input type="number" id="score" placeholder="Score" autocomplete="off">
+        <div class="actions">
+          <button id="miBoton" type="button">Guardar</button>
+          <button id="btn-ver" type="button">Ver tabla</button>
+        </div>
+      </form>
+      <p id="respuesta"></p>
+    </div>
+  </div>
+
+  <div class="card" id="tabla-scores">
+    <div class="card-title">Top puntajes</div>
+    <div class="card-body" style="padding:0">
+      <table>
+        <thead>
+          <tr><th>#</th><th>Jugador</th><th>Puntos</th></tr>
+        </thead>
+        <tbody id="score-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script type="module">
+    const WS = 'http://localhost/WebServices/WebServices.php';
+
+    document.getElementById('miBoton').addEventListener('click', function () {
+      const usuario = document.getElementById('usuario').value.trim();
+      const score   = document.getElementById('score').value.trim();
+
+      if (!usuario || !score) {
+        document.getElementById('respuesta').textContent = 'Completa ambos campos.';
+        return;
+      }
+
+      const data = new URLSearchParams({ nombre: usuario, score: score });
+
+      fetch(`${WS}?${data.toString()}`)
+        .then(r => r.text())
+        .then(msg => {
+          if (msg !== '') {
+            document.getElementById('respuesta').textContent = msg;
+            document.getElementById('usuario').value = '';
+            document.getElementById('score').value   = '';
+          }
+        })
+        .catch(err => console.error(err));
+    });
+
+    document.getElementById('btn-ver').addEventListener('click', function () {
+      fetch(`${WS}?accion=obtener`)
+        .then(r => r.json())
+        .then(lista => {
+          const tbody = document.getElementById('score-body');
+          tbody.innerHTML = lista.length
+            ? lista.map((p, i) =>
+                `<tr><td>${i + 1}</td><td>${p.nombre}</td><td>${p.puntos}</td></tr>`
+              ).join('')
+            : '<tr><td colspan="3" style="color:#bbb">Sin datos</td></tr>';
+          document.getElementById('tabla-scores').style.display = 'block';
+        })
+        .catch(err => console.error(err));
+    });
+  </script>
+
+</body>
+</html>
