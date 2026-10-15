@@ -492,6 +492,33 @@ h2 {
 }
 
 /* ============================================================
+   MULTIJUGADOR (conexion)
+   ============================================================ */
+.multijugador {
+  margin-top: 18px;
+  padding-top: 18px;
+  text-align: left;
+  border-top: var(--borde);
+}
+
+.multijugador__fila {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.multijugador__fila .formulario__campo {
+  flex: 1;
+  width: auto;
+}
+
+.multijugador__fila .boton {
+  width: auto;
+  margin-bottom: 0;
+  white-space: nowrap;
+}
+
+/* ============================================================
    FACEBOOK LOGIN
    ============================================================ */
 .facebook {

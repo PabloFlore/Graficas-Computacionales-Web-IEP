@@ -16,7 +16,7 @@ const MODELOS = [
   },
 ];
 
-export async function iniciarEscena() {
+export async function iniciarEscena({ alMoverJugador } = {}) {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
@@ -124,25 +124,40 @@ export async function iniciarEscena() {
     }
 
     const tecla = event.key;
+    let movido = false;
+
     if (tecla === 'a' || tecla === 'ArrowLeft') {
       jugador.position.x -= PASO;
+      movido = true;
     }
     if (tecla === 'd' || tecla === 'ArrowRight') {
       jugador.position.x += PASO;
+      movido = true;
     }
     if (tecla === 'w' || tecla === 'ArrowUp') {
       jugador.position.z -= PASO;
+      movido = true;
     }
     if (tecla === 's' || tecla === 'ArrowDown') {
       jugador.position.z += PASO;
+      movido = true;
     }
 
     if (tecla.startsWith('Arrow')) {
       event.preventDefault();
     }
 
+    if (!movido) {
+      return;
+    }
+
     jugador.position.x = Math.max(-LIMITE_X, Math.min(LIMITE_X, jugador.position.x));
     jugador.position.z = Math.max(LIMITE_Z_FONDO, Math.min(LIMITE_Z_FRENTE, jugador.position.z));
+
+    // Se avisa la nueva posicion para sincronizarla con los demas jugadores.
+    if (typeof alMoverJugador === 'function') {
+      alMoverJugador(jugador.position);
+    }
   });
 
   function animate() {
@@ -165,4 +180,54 @@ export async function iniciarEscena() {
       renderer.render(scene, camera);
     }
   }
+
+  /* ---------- Jugadores remotos (multijugador) ---------- */
+  const remotos = new Map();
+
+  // Color estable por jugador, derivado del id, para distinguirlos.
+  function colorPorId(id) {
+    let hash = 0;
+    for (let i = 0; i < id.length; i += 1) {
+      hash = (hash * 31 + id.charCodeAt(i)) % 360;
+    }
+    return new THREE.Color(`hsl(${hash}, 80%, 55%)`);
+  }
+
+  function agregarJugadorRemoto(remoto) {
+    if (!remoto || remotos.has(remoto.id)) {
+      return;
+    }
+
+    const avatar = new THREE.Mesh(
+      new THREE.BoxGeometry(1, 1, 1),
+      new THREE.MeshPhongMaterial({ color: colorPorId(remoto.id) })
+    );
+    avatar.name = remoto.nombre || remoto.id;
+    avatar.position.set(remoto.x || 0, remoto.y || 0, remoto.z || 0);
+    scene.add(avatar);
+    remotos.set(remoto.id, avatar);
+  }
+
+  function moverJugadorRemoto(remoto) {
+    const avatar = remotos.get(remoto.id);
+    if (avatar) {
+      avatar.position.set(remoto.x, remoto.y, remoto.z);
+    }
+  }
+
+  function quitarJugadorRemoto(id) {
+    const avatar = remotos.get(id);
+    if (avatar) {
+      scene.remove(avatar);
+      remotos.delete(id);
+    }
+  }
+
+  return {
+    scene,
+    jugador,
+    agregarJugadorRemoto,
+    moverJugadorRemoto,
+    quitarJugadorRemoto
+  };
 }
