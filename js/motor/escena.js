@@ -1,6 +1,22 @@
 import * as THREE from 'three';
+import { crearGestorCarga, cargarModelos } from './modelos.js';
 
-export function iniciarEscena() {
+// Lista de modelos 3D a cargar. Queda vacia hasta tener los archivos:
+// basta agregar un elemento y el modelo aparece en la escena.
+//   { tipo: 'obj', ruta: 'assets/models/Anakin', nombre: 'Anakin', escala: new THREE.Vector3(1, 1, 1) }
+//   { tipo: 'glb', ruta: 'assets/models/glb/pato.glb', nombre: 'Pato', escala: new THREE.Vector3(1, 1, 1) }
+// El pato apoya sobre el cubo (cubo de 1x1x1 centrado en el origen -> techo en Y=0.5).
+const MODELOS = [
+  {
+    tipo: 'obj',
+    ruta: 'assets/models/duck',
+    nombre: 'Duck',
+    escala: new THREE.Vector3(1, 1, 1),
+    posicion: new THREE.Vector3(0, 0.5, 0)
+  },
+];
+
+export async function iniciarEscena() {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
@@ -19,7 +35,12 @@ export function iniciarEscena() {
     new THREE.BoxGeometry(1, 1, 1),
     new THREE.MeshPhongMaterial({ color: 0x00ff00 })
   );
-  scene.add(cube);
+
+  // El jugador agrupa el cubo (hitbox) y los modelos cargados (pato),
+  // asi se mueven juntos con el teclado.
+  const jugador = new THREE.Group();
+  jugador.add(cube);
+  scene.add(jugador);
 
   const esfera = new THREE.Mesh(
     new THREE.SphereGeometry(0.6, 32, 32),
@@ -83,6 +104,46 @@ export function iniciarEscena() {
   const LIMITE = 10;
 
   renderer.setAnimationLoop(animate);
+
+  // Un unico LoadingManager compartido por todos los loaders.
+  // cargarModelos no rechaza: si un archivo falta, solo avisa por consola.
+  const gestor = crearGestorCarga();
+  const modelosCargados = await cargarModelos(MODELOS, gestor);
+  modelosCargados.forEach((modelo) => jugador.add(modelo));
+
+  // Control del jugador por teclado: WASD y flechas, pasos de 1 unidad
+  // sobre el plano X/Z. Solo responde cuando la vista de juego esta activa.
+  const PASO = 1;
+  const LIMITE_X = 13;
+  const LIMITE_Z_FONDO = -4.5;
+  const LIMITE_Z_FRENTE = 0;
+
+  document.addEventListener('keydown', (event) => {
+    if (!vistaJuego.classList.contains('activa')) {
+      return;
+    }
+
+    const tecla = event.key;
+    if (tecla === 'a' || tecla === 'ArrowLeft') {
+      jugador.position.x -= PASO;
+    }
+    if (tecla === 'd' || tecla === 'ArrowRight') {
+      jugador.position.x += PASO;
+    }
+    if (tecla === 'w' || tecla === 'ArrowUp') {
+      jugador.position.z -= PASO;
+    }
+    if (tecla === 's' || tecla === 'ArrowDown') {
+      jugador.position.z += PASO;
+    }
+
+    if (tecla.startsWith('Arrow')) {
+      event.preventDefault();
+    }
+
+    jugador.position.x = Math.max(-LIMITE_X, Math.min(LIMITE_X, jugador.position.x));
+    jugador.position.z = Math.max(LIMITE_Z_FONDO, Math.min(LIMITE_Z_FRENTE, jugador.position.z));
+  });
 
   function animate() {
     const delta = reloj.getDelta();
