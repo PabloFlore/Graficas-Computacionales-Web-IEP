@@ -40,6 +40,15 @@
       <button class="boton boton--secundario" data-vista="vista-configuraciones">Configuraciones</button>
       <button class="boton boton--terciario" data-vista="vista-puntuaciones">Puntuaciones</button>
 
+      <!-- Conexión multijugador -->
+      <div class="multijugador">
+        <label class="campo__etiqueta" for="nombre-jugador">Jugador en línea</label>
+        <div class="multijugador__fila">
+          <input class="formulario__campo" type="text" id="nombre-jugador" placeholder="Tu nombre" autocomplete="off">
+          <button class="boton boton--secundario" id="boton-conectar" type="button">Conectar</button>
+        </div>
+      </div>
+
       <!-- Inicio de sesión con Facebook (SDK de JavaScript) -->
       <div class="facebook">
         <fb:login-button scope="public_profile,email" onlogin="checkLoginState();"></fb:login-button>
@@ -171,6 +180,9 @@
       <button class="boton boton--fantasma" data-vista="vista-menu">Volver</button>
     </div>
   </section>
+
+  <!-- Cliente Socket.IO (define el global `io`) -->
+  <script src="/socket.io/socket.io.js"></script>
 
   <script type="module" src="js/main.js"></script>
 
