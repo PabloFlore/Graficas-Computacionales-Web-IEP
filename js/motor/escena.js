@@ -1,27 +1,23 @@
 import * as THREE from 'three';
 import { crearGestorCarga, cargarModelos } from './modelos.js';
+import { crearPiramide } from './piramide.js';
 
-// Lista de modelos 3D a cargar. Queda vacia hasta tener los archivos:
-// basta agregar un elemento y el modelo aparece en la escena.
-//   { tipo: 'obj', ruta: 'assets/models/Anakin', nombre: 'Anakin', escala: new THREE.Vector3(1, 1, 1) }
-//   { tipo: 'glb', ruta: 'assets/models/glb/pato.glb', nombre: 'Pato', escala: new THREE.Vector3(1, 1, 1) }
-// El pato apoya sobre el cubo (cubo de 1x1x1 centrado en el origen -> techo en Y=0.5).
 const MODELOS = [
   {
     tipo: 'obj',
     ruta: 'assets/models/duck',
     nombre: 'Duck',
     escala: new THREE.Vector3(1, 1, 1),
-    posicion: new THREE.Vector3(0, 0.5, 0)
+    posicion: new THREE.Vector3(0, 0.5, 0),
   },
 ];
 
 export async function iniciarEscena({ alMoverJugador } = {}) {
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
-  // alpha: true deja el lienzo transparente para que se vea
-  // el fondo negro de la ventana detrás de la escena.
+  // FOV reducido para vista isométrica limpia (menos deformación de perspectiva).
+  const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+
   const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -29,132 +25,102 @@ export async function iniciarEscena({ alMoverJugador } = {}) {
   const vistaJuego = document.getElementById('vista-juego');
   vistaJuego.insertBefore(renderer.domElement, vistaJuego.firstChild);
 
-  /* ---------- Figuras: textura basica + luces (Practica 4) ---------- */
-  // MeshPhongMaterial reacciona a las luces de la escena.
-  const cube = new THREE.Mesh(
-    new THREE.BoxGeometry(1, 1, 1),
-    new THREE.MeshPhongMaterial({ color: 0x00ff00 })
-  );
+  /* ---------- Pirámide ---------- */
+  crearPiramide(scene);
 
-  // El jugador agrupa el cubo (hitbox) y los modelos cargados (pato),
-  // asi se mueven juntos con el teclado.
+  /* ---------- Jugador ---------- */
+  // jugador: control de teclado mueve X/Z.
+  // bob: subgrupo que anima el eje Y (bob de espera) sin interferir con el teclado.
   const jugador = new THREE.Group();
-  jugador.add(cube);
+  const bob = new THREE.Group();
+  jugador.add(bob);
   scene.add(jugador);
+  jugador.position.set(0, 0, 4);
 
-  const esfera = new THREE.Mesh(
-    new THREE.SphereGeometry(0.6, 32, 32),
-    new THREE.MeshPhongMaterial({ color: 0x0000ff })
-  );
-  esfera.position.set(-10, 0.2, -1);
-  scene.add(esfera);
+  /* ---------- Luces ---------- */
 
-  const cilindro = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.5, 0.5, 1, 32),
-    new THREE.MeshPhongMaterial({ color: 0xff0000 })
-  );
-  cilindro.position.set(-2.5, 0.2, -1);
-  scene.add(cilindro);
-
-  /* ---------- Suelo ---------- */
-  const suelo = new THREE.Mesh(
-    new THREE.PlaneGeometry(28, 5),
-    new THREE.MeshPhongMaterial({ color: 0x888888, specular: 0xffffff, side: THREE.DoubleSide })
-  );
-  suelo.rotation.x = -Math.PI / 2;
-  suelo.position.y = -1;
-  suelo.position.z = -2.5;
-  scene.add(suelo);
-
-  /* ---------- Luces (como la Practica 4) ---------- */
-
-  // Luz ambiental
-  const luzAmbiental = new THREE.AmbientLight(0xffffff, 0.3);
+  // Luz ambiental: rellena las sombras sin borrarlas por completo.
+  const luzAmbiental = new THREE.AmbientLight(0xffffff, 0.5);
   scene.add(luzAmbiental);
 
-  // Luz direccional (frontal): lado de enfrente iluminado, trasero en sombra
-  const luzDireccional = new THREE.DirectionalLight(0xffffff, 1.5);
-  luzDireccional.position.set(0, 0, 10);
-  const helperDireccional = new THREE.DirectionalLightHelper(luzDireccional, 2);
-  scene.add(luzDireccional, helperDireccional);
+  const sol = new THREE.DirectionalLight(0xffffff, 1.2);
+  sol.position.set(10, 12, 10);
+  scene.add(sol);
 
-  // Luz puntual
-  const luzPuntual = new THREE.PointLight(0xff8c00, 2);
-  luzPuntual.position.set(esfera.position.x, 4, -10);
-  const helperPuntual = new THREE.PointLightHelper(luzPuntual);
-  scene.add(luzPuntual, helperPuntual);
+  /* ---------- Cámara isométrica ---------- */
+  // Posición diagonal: igual distancia en X y Z, elevada en Y.
+  // lookAt al centro de la pirámide (nivel 2 de 5).
+  camera.position.set(14, 14, 14);
+  camera.lookAt(0, 2, 0);
 
-  camera.position.z = 8;
-  camera.position.y = 2.5;
-
-  // La escena y el lienzo se adaptan al tamaño de la ventana.
   window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
   });
 
-  // Solo se dibuja cuando la vista de juego está activa: así el
-  // render se detiene en el menú y durante la pausa. El reloj se
-  // consulta igual en cada fotograma para que el tiempo pausado no
-  // se acumule y la esfera no salte de golpe al reanudar.
+  /* ---------- Animación ---------- */
   const reloj = new THREE.Clock();
-  let direccion = 1;
-  const velocidad = 2;
-  const LIMITE = 10;
+
+  // mixers recoge todos los AnimationMixer activos (pato + cualquier GLB futuro).
+  const mixers = [];
 
   renderer.setAnimationLoop(animate);
 
-  // Un unico LoadingManager compartido por todos los loaders.
-  // cargarModelos no rechaza: si un archivo falta, solo avisa por consola.
+  /* ---------- Carga del pato ---------- */
   const gestor = crearGestorCarga();
   const modelosCargados = await cargarModelos(MODELOS, gestor);
-  modelosCargados.forEach((modelo) => jugador.add(modelo));
 
-  // Control del jugador por teclado: WASD y flechas, pasos de 1 unidad
-  // sobre el plano X/Z. Solo responde cuando la vista de juego esta activa.
+  modelosCargados.forEach((modelo) => {
+    bob.add(modelo);
+
+    // Si el modelo trae animaciones (GLB/GLTF), las reproducimos todas.
+    if (modelo.userData.animations?.length) {
+      const m = new THREE.AnimationMixer(modelo);
+      modelo.userData.animations.forEach((clip) => m.clipAction(clip).play());
+      mixers.push(m);
+    }
+  });
+
+  // Animación de espera (idle bob): oscilación suave del pato en Y.
+  // Usa NumberKeyframeTrack + AnimationMixer para demostrar el sistema
+  // de animaciones de Three.js/WebGL integrado en la escena.
+  const mixerBob = new THREE.AnimationMixer(bob);
+  mixers.push(mixerBob);
+
+  const pistaBob = new THREE.NumberKeyframeTrack(
+    '.position[y]',       // propiedad del nodo raíz del mixer (bob)
+    [0,    0.5,  1.0],    // tiempos (s)
+    [0.5,  0.58, 0.5]     // Y base = 0.5 (sobre el cubo), cima = 0.58
+  );
+  const clipBob = new THREE.AnimationClip('espera', 1.0, [pistaBob]);
+  mixerBob.clipAction(clipBob).setLoop(THREE.LoopRepeat).play();
+
+  /* ---------- Control por teclado ---------- */
+  // Movimiento sobre la base de la pirámide (−2 a +2 en X y Z).
+  // TODO: implementar detección de escalón para subir/bajar de nivel.
   const PASO = 1;
-  const LIMITE_X = 13;
-  const LIMITE_Z_FONDO = -4.5;
-  const LIMITE_Z_FRENTE = 0;
+  const LIMITE_X = 4;
+  const LIMITE_Z_MIN = -4;
+  const LIMITE_Z_MAX = 4;
 
   document.addEventListener('keydown', (event) => {
-    if (!vistaJuego.classList.contains('activa')) {
-      return;
-    }
+    if (!vistaJuego.classList.contains('activa')) return;
 
-    const tecla = event.key;
     let movido = false;
+    const tecla = event.key;
 
-    if (tecla === 'a' || tecla === 'ArrowLeft') {
-      jugador.position.x -= PASO;
-      movido = true;
-    }
-    if (tecla === 'd' || tecla === 'ArrowRight') {
-      jugador.position.x += PASO;
-      movido = true;
-    }
-    if (tecla === 'w' || tecla === 'ArrowUp') {
-      jugador.position.z -= PASO;
-      movido = true;
-    }
-    if (tecla === 's' || tecla === 'ArrowDown') {
-      jugador.position.z += PASO;
-      movido = true;
-    }
+    if (tecla === 'a' || tecla === 'ArrowLeft') { jugador.position.x -= PASO; movido = true; }
+    if (tecla === 'd' || tecla === 'ArrowRight') { jugador.position.x += PASO; movido = true; }
+    if (tecla === 'w' || tecla === 'ArrowUp')    { jugador.position.z -= PASO; movido = true; }
+    if (tecla === 's' || tecla === 'ArrowDown')  { jugador.position.z += PASO; movido = true; }
 
-    if (tecla.startsWith('Arrow')) {
-      event.preventDefault();
-    }
-
-    if (!movido) {
-      return;
-    }
+    if (tecla.startsWith('Arrow')) event.preventDefault();
+    if (!movido) return;
 
     jugador.position.x = Math.max(-LIMITE_X, Math.min(LIMITE_X, jugador.position.x));
-    jugador.position.z = Math.max(LIMITE_Z_FONDO, Math.min(LIMITE_Z_FRENTE, jugador.position.z));
+    jugador.position.z = Math.max(LIMITE_Z_MIN, Math.min(LIMITE_Z_MAX, jugador.position.z));
 
-    // Se avisa la nueva posicion para sincronizarla con los demas jugadores.
     if (typeof alMoverJugador === 'function') {
       alMoverJugador(jugador.position);
     }
@@ -162,21 +128,10 @@ export async function iniciarEscena({ alMoverJugador } = {}) {
 
   function animate() {
     const delta = reloj.getDelta();
+    // Los mixers se actualizan siempre: así no acumulan tiempo durante la pausa.
+    mixers.forEach((m) => m.update(delta));
 
     if (vistaJuego.classList.contains('activa')) {
-      // Movimiento gradual y lento de la esfera entre X=-10 y X=10.
-      esfera.position.x += direccion * velocidad * delta;
-      if (esfera.position.x >= LIMITE) {
-        esfera.position.x = LIMITE;
-        direccion *= -1;
-      } else if (esfera.position.x <= -LIMITE) {
-        esfera.position.x = -LIMITE;
-        direccion *= -1;
-      }
-
-      // La luz puntual comparte la posición X de la esfera.
-      luzPuntual.position.x = esfera.position.x;
-
       renderer.render(scene, camera);
     }
   }
@@ -184,7 +139,6 @@ export async function iniciarEscena({ alMoverJugador } = {}) {
   /* ---------- Jugadores remotos (multijugador) ---------- */
   const remotos = new Map();
 
-  // Color estable por jugador, derivado del id, para distinguirlos.
   function colorPorId(id) {
     let hash = 0;
     for (let i = 0; i < id.length; i += 1) {
@@ -194,9 +148,7 @@ export async function iniciarEscena({ alMoverJugador } = {}) {
   }
 
   function agregarJugadorRemoto(remoto) {
-    if (!remoto || remotos.has(remoto.id)) {
-      return;
-    }
+    if (!remoto || remotos.has(remoto.id)) return;
 
     const avatar = new THREE.Mesh(
       new THREE.BoxGeometry(1, 1, 1),
@@ -210,9 +162,7 @@ export async function iniciarEscena({ alMoverJugador } = {}) {
 
   function moverJugadorRemoto(remoto) {
     const avatar = remotos.get(remoto.id);
-    if (avatar) {
-      avatar.position.set(remoto.x, remoto.y, remoto.z);
-    }
+    if (avatar) avatar.position.set(remoto.x, remoto.y, remoto.z);
   }
 
   function quitarJugadorRemoto(id) {
@@ -228,6 +178,6 @@ export async function iniciarEscena({ alMoverJugador } = {}) {
     jugador,
     agregarJugadorRemoto,
     moverJugadorRemoto,
-    quitarJugadorRemoto
+    quitarJugadorRemoto,
   };
 }

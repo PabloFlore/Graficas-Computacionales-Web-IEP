@@ -2,10 +2,24 @@
   --tinta: #1f2430;
   --papel: #ffffff;
 
-  --borde: 3px solid var(--tinta);
-  --radio: 0;
-  --sombra: 0 6px 0 var(--tinta);
-  --sombra-chica: 0 4px 0 var(--tinta);
+  /* paleta del pato */
+  --amarillo: #ffd45e;
+  --amarillo-claro: #ffe9a8;
+  --naranja: #ff9d3d;
+
+  /* paleta del mundo */
+  --menta: #8fe0b8;
+  --rojo: #ff6b57;
+  --cielo: #6cc0f0;
+  --lila: #c5b8f5;
+  --rosa: #ff8fab;
+  --gris: #deded6;
+  --texto-suave: #6e7a8a;
+
+  --borde: 2.5px solid var(--tinta);
+  --radio: 14px;
+  --sombra: 0 5px 0 var(--tinta);
+  --sombra-chica: 0 3px 0 var(--tinta);
 }
 
 /* ---------- Base ---------- */
@@ -16,16 +30,16 @@
 body {
   margin: 0;
   min-height: 100vh;
-  font-family: 'Roboto', 'Trebuchet MS', 'Segoe UI', sans-serif;
+  font-family: 'Fredoka', 'Trebuchet MS', 'Segoe UI', sans-serif;
   color: var(--tinta);
-  background: #000000;
+  background: var(--cielo);
 }
 
 h1,
 h2 {
   margin: 0;
   line-height: 1.1;
-  letter-spacing: -0.5px;
+  letter-spacing: 0;
 }
 
 /* ============================================================
@@ -78,26 +92,28 @@ h2 {
   font: inherit;
   font-size: 17px;
   font-weight: 600;
-  color: #000000;
-  background: #c0c0c0;
-  border: 1px solid #000000;
-  border-radius: 0;
+  color: var(--tinta);
+  background: var(--gris);
+  border: var(--borde);
+  border-radius: 8px;
   box-shadow: none;
   cursor: pointer;
+  transition: filter 0.1s;
+}
+
+.boton:hover {
+  filter: brightness(0.92);
 }
 
 .boton:last-child {
   margin-bottom: 0;
 }
 
-.boton--primario,
-.boton--secundario,
-.boton--terciario,
-.boton--fantasma,
-.boton--peligro,
-.boton--hud {
-  background: #c0c0c0;
-}
+.boton--primario  { background: var(--menta); }
+.boton--secundario { background: var(--cielo); }
+.boton--terciario  { background: var(--lila); }
+.boton--fantasma  { background: var(--papel); }
+.boton--peligro   { background: var(--rojo); }
 
 /* ============================================================
    MENU INICIAL
@@ -108,12 +124,22 @@ h2 {
 
 .marca__logo {
   display: inline-block;
-  padding: 6px 18px;
-  margin-bottom: 12px;
-  font-size: 12px;
+  padding: 5px 16px;
+  margin-bottom: 14px;
+  font-size: 11px;
   font-weight: 600;
-  letter-spacing: 2px;
+  letter-spacing: 1.5px;
   text-transform: uppercase;
+  background: var(--menta);
+  border: var(--borde);
+  border-radius: 99px;
+}
+
+.marca__titulo {
+  font-size: 42px;
+  font-weight: 700;
+  text-shadow: 4px 4px 0 var(--amarillo);
+  margin-bottom: 8px;
 }
 
 .marca__pato {
@@ -144,7 +170,7 @@ h2 {
   margin-bottom: 14px;
   background: #fbfaf7;
   border: var(--borde);
-  border-radius: 0;
+  border-radius: 8px;
 }
 
 .campo__etiqueta {
@@ -169,7 +195,7 @@ h2 {
   appearance: none;
   background: var(--papel);
   border: 2px solid var(--tinta);
-  border-radius: 0;
+  border-radius: 99px;
   cursor: pointer;
 }
 
@@ -179,7 +205,7 @@ h2 {
   height: 22px;
   background: var(--naranja);
   border: 2px solid var(--tinta);
-  border-radius: 0;
+  border-radius: 4px;
   cursor: pointer;
 }
 
@@ -188,7 +214,7 @@ h2 {
   height: 22px;
   background: var(--naranja);
   border: 2px solid var(--tinta);
-  border-radius: 0;
+  border-radius: 4px;
   cursor: pointer;
 }
 
@@ -206,7 +232,7 @@ h2 {
   color: var(--tinta);
   background: var(--papel);
   border: 2px solid var(--tinta);
-  border-radius: 0;
+  border-radius: 6px;
   cursor: pointer;
 }
 
@@ -235,7 +261,7 @@ h2 {
   color: var(--tinta);
   background: var(--papel);
   border: 2px solid var(--tinta);
-  border-radius: 0;
+  border-radius: 6px;
 }
 
 .tabla-puntos {
@@ -245,7 +271,7 @@ h2 {
   border-spacing: 0;
   overflow: hidden;
   border: var(--borde);
-  border-radius: 0;
+  border-radius: var(--radio);
 }
 
 .tabla-puntos th,
@@ -350,7 +376,7 @@ h2 {
   padding: 12px 16px;
   background: var(--papel);
   border: var(--borde);
-  border-radius: 0;
+  border-radius: 10px;
   box-shadow: var(--sombra-chica);
 }
 
@@ -377,7 +403,7 @@ h2 {
   height: 16px;
   background: var(--gris);
   border: 2px solid var(--tinta);
-  border-radius: 0;
+  border-radius: 99px;
   overflow: hidden;
 }
 
@@ -425,20 +451,73 @@ h2 {
   color: var(--texto-suave);
 }
 
+/* ---------- Indicador de niveles ---------- */
+.hud__etiqueta {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--texto-suave);
+}
+
+.niveles {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.nivel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--gris);
+  border: 2px solid var(--tinta);
+  border-radius: 4px;
+  color: var(--tinta);
+}
+
+.nivel:nth-child(1) { height: 20px; }
+.nivel:nth-child(2) { height: 28px; }
+.nivel:nth-child(3) { height: 36px; }
+.nivel:nth-child(4) { height: 44px; }
+.nivel:nth-child(5) { height: 52px; }
+
+.nivel--activo {
+  background: var(--menta);
+}
+
+/* ---------- Cronómetro ---------- */
+.cronometro {
+  text-align: center;
+}
+
+.cronometro__tiempo {
+  display: block;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 4px;
+  letter-spacing: 2px;
+}
+
 .boton--hud {
   width: auto;
   margin: 0;
   padding: 10px 22px;
   font-size: 15px;
-  background: #c0c0c0;
+  background: var(--papel);
 }
 
 /* ============================================================
    MENU DE PAUSA
    ============================================================ */
 #vista-pausa.activa {
-  /* Fondo atenuado, para que se lea como ventana emergente */
-  background: rgba(31, 36, 48, 0.55);
+  background: rgba(31, 36, 48, 0.78);
 }
 
 .tarjeta--emergente {
