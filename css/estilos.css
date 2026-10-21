@@ -451,6 +451,60 @@ h2 {
   color: var(--texto-suave);
 }
 
+/* ---------- Indicador de niveles ---------- */
+.hud__etiqueta {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--texto-suave);
+}
+
+.niveles {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.nivel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--gris);
+  border: 2px solid var(--tinta);
+  border-radius: 4px;
+  color: var(--tinta);
+}
+
+.nivel:nth-child(1) { height: 20px; }
+.nivel:nth-child(2) { height: 28px; }
+.nivel:nth-child(3) { height: 36px; }
+.nivel:nth-child(4) { height: 44px; }
+.nivel:nth-child(5) { height: 52px; }
+
+.nivel--activo {
+  background: var(--menta);
+}
+
+/* ---------- Cronómetro ---------- */
+.cronometro {
+  text-align: center;
+}
+
+.cronometro__tiempo {
+  display: block;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 4px;
+  letter-spacing: 2px;
+}
+
 .boton--hud {
   width: auto;
   margin: 0;

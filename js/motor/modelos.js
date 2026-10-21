@@ -83,7 +83,12 @@ export function cargarModeloGLB(ruta, nombre, escala = new THREE.Vector3(1, 1, 1
 
     loader.load(
       ruta,
-      (gltf) => resolve(aplicarTransformacion(gltf.scene, nombre, escala, posicion)),
+      (gltf) => {
+        const objeto = aplicarTransformacion(gltf.scene, nombre, escala, posicion);
+        // Guardamos los clips para que la escena los pueda reproducir con AnimationMixer.
+        objeto.userData.animations = gltf.animations ?? [];
+        resolve(objeto);
+      },
       undefined,
       (error) => reject(error)
     );

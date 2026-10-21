@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pato en la Pista</title>
+  <title>Pato a la Cima</title>
 
   <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
 
@@ -46,7 +46,7 @@
           </g>
         </svg>
 
-        <h1 class="marca__titulo">Pato en la Pista</h1>
+        <h1 class="marca__titulo">Pato a la Cima</h1>
         <p class="marca__lema">Esquiva las bicicletas y llega antes que los demás.</p>
       </div>
 
@@ -77,25 +77,19 @@
       <div class="hud__fila">
         <div class="hud__grupo">
           <div class="hud__panel">
-            <div class="barra">
-              <div class="barra__riel">
-                <span class="barra__etiqueta">Vida</span>
-                <div class="barra__relleno barra__relleno--vida"></div>
-              </div>
-            </div>
-            <div class="barra">
-              <div class="barra__riel">
-                <span class="barra__etiqueta">Velocidad</span>
-                <div class="barra__relleno barra__relleno--energia"></div>
-              </div>
+            <span class="hud__etiqueta">Nivel</span>
+            <div class="niveles">
+              <div class="nivel nivel--activo">1</div>
+              <div class="nivel">2</div>
+              <div class="nivel">3</div>
+              <div class="nivel">4</div>
+              <div class="nivel">5</div>
             </div>
           </div>
 
-          <div class="hud__panel marcador">
-            <div>
-              <span class="marcador__cifra">0</span>
-              <span class="marcador__texto">Esquivadas</span>
-            </div>
+          <div class="hud__panel cronometro">
+            <span class="cronometro__tiempo">00:00</span>
+            <span class="marcador__texto">Tiempo</span>
           </div>
         </div>
 
