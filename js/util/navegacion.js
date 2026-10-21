@@ -1,19 +1,33 @@
 import { iniciarPreferencias } from '../config/preferencias.js';
 import { cargarPuntuaciones } from '../red/puntuaciones.js';
 
+// Callback opcional que se avisa en cada cambio de vista, con la vista
+// anterior y la nueva. Lo usa main.js para sacar al jugador del juego.
+let alCambiarVista = null;
+let vistaActual = null;
+
 export function mostrarVista(id) {
+  const anterior = vistaActual;
+
   document.querySelectorAll('.vista').forEach((vista) => {
     vista.classList.toggle('activa', vista.id === id);
   });
+
+  vistaActual = id;
 
   // La tabla se rellena cada vez que se entra a Puntuaciones, para
   // reflejar los scores que se hayan guardado en esta sesión.
   if (id === 'vista-puntuaciones') {
     cargarPuntuaciones();
   }
+
+  if (typeof alCambiarVista === 'function') {
+    alCambiarVista(anterior, id);
+  }
 }
 
-export function iniciarNavegacion() {
+export function iniciarNavegacion({ alCambiarVista: callback } = {}) {
+  alCambiarVista = typeof callback === 'function' ? callback : null;
   iniciarPreferencias();
   mostrarVista('vista-menu');
 
