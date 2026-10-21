@@ -2,6 +2,14 @@ import * as THREE from 'three';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 import { MTLLoader } from 'three/addons/loaders/MTLLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+
+// Los GLB decorativos (spring, escudo, radar) usan
+// KHR_draco_mesh_compression, que el GLTFLoader no decodifica por si solo.
+// El DRACOLoader se crea una sola vez y se reutiliza: el decodificador se
+// descarga de la misma version de Three que usa el importmap.
+const dracoLoader = new DRACOLoader();
+dracoLoader.setDecoderPath('https://unpkg.com/three@0.155.0/examples/jsm/libs/draco/');
 
 /**
  * Crea un LoadingManager compartido. Todos los loaders reportan sus
@@ -80,6 +88,7 @@ export function cargarModeloOBJ(ruta, nombre, escala = new THREE.Vector3(1, 1, 1
 export function cargarModeloGLB(ruta, nombre, escala = new THREE.Vector3(1, 1, 1), posicion, gestor) {
   return new Promise((resolve, reject) => {
     const loader = new GLTFLoader(gestor);
+    loader.setDRACOLoader(dracoLoader);
 
     loader.load(
       ruta,
