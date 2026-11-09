@@ -101,6 +101,11 @@ h2 {
   transition: filter 0.1s;
 }
 
+a.boton {
+  color: var(--tinta);
+  text-decoration: none;
+}
+
 .boton:hover {
   filter: brightness(0.92);
 }
@@ -114,6 +119,7 @@ h2 {
 .boton--terciario  { background: var(--lila); }
 .boton--fantasma  { background: var(--papel); }
 .boton--peligro   { background: var(--rojo); }
+.boton--arcade    { background: var(--naranja); }
 
 /* ============================================================
    MENU INICIAL
@@ -182,6 +188,49 @@ h2 {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.campo__nota {
+  margin: 6px 0 0;
+  font-size: 13px;
+  opacity: 0.8;
+}
+
+.campo select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.hud__estado {
+  align-self: flex-start;
+  margin-top: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tinta);
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 8px;
+}
+
+.fin-partida {
+  position: fixed;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  padding: 16px 24px;
+  font-size: 20px;
+  font-weight: 700;
+  text-align: center;
+  color: #fff;
+  background: rgba(20, 22, 30, 0.88);
+  border-radius: 12px;
+  pointer-events: none;
+}
+
+.fin-partida[hidden],
+.hud__estado[hidden] {
+  display: none;
 }
 
 .campo__icono {
@@ -262,6 +311,43 @@ h2 {
   background: var(--papel);
   border: 2px solid var(--tinta);
   border-radius: 6px;
+}
+
+/* ---------- Pestanas de puntuaciones ---------- */
+.tabs-puntuaciones {
+  display: inline-flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.tab-puntuaciones {
+  padding: 8px 18px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--tinta);
+  background: var(--papel);
+  border: var(--borde);
+  border-radius: 999px;
+  box-shadow: var(--sombra-chica);
+  cursor: pointer;
+}
+
+.tab-puntuaciones.activa {
+  background: var(--amarillo);
+}
+
+.tab-puntuaciones:focus-visible {
+  outline: 3px solid var(--tinta);
+  outline-offset: 2px;
+}
+
+.formulario__ayuda {
+  margin: 4px 0 14px;
+  color: var(--texto-suave);
+}
+
+.formulario__ayuda strong {
+  color: var(--tinta);
 }
 
 .tabla-puntos {
@@ -380,6 +466,97 @@ h2 {
   box-shadow: var(--sombra-chica);
 }
 
+.hud__panel--arcade {
+  display: none;
+}
+
+#vista-juego.modo-arcade .hud__panel--clasico {
+  display: none;
+}
+
+#vista-juego.modo-arcade .hud__panel--arcade {
+  display: block;
+}
+
+.hud__panel--ranking {
+  min-width: 210px;
+}
+
+.ranking {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 170px;
+  margin: 4px 0 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.ranking__fila {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ranking__nombre {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ranking__tiempo {
+  color: var(--texto-suave);
+  font-variant-numeric: tabular-nums;
+}
+
+.ranking__vacio {
+  font-size: 13px;
+  color: var(--texto-suave);
+}
+
+.vidas {
+  display: flex;
+  gap: 5px;
+  margin-top: 4px;
+}
+
+.vida {
+  width: 12px;
+  height: 12px;
+  background: var(--rojo);
+  border: 2px solid var(--tinta);
+  border-radius: 50%;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.vida--perdida {
+  opacity: 0.18;
+  transform: scale(0.8);
+}
+
+.hud__ayuda {
+  display: flex;
+  flex-wrap: wrap;
+  align-self: flex-start;
+  gap: 6px 14px;
+  margin-top: 12px;
+  padding: 10px 14px;
+  font-size: 11px;
+  color: var(--tinta);
+  background: rgba(255, 255, 255, 0.9);
+  border: var(--borde);
+  border-radius: 10px;
+  box-shadow: var(--sombra-chica);
+  pointer-events: none;
+}
+
+.hud__ayuda b {
+  font-weight: 700;
+}
+
 .hud__patito {
   display: block;
   width: 38px;
@@ -481,14 +658,18 @@ h2 {
   color: var(--tinta);
 }
 
-.nivel:nth-child(1) { height: 20px; }
-.nivel:nth-child(2) { height: 28px; }
-.nivel:nth-child(3) { height: 36px; }
-.nivel:nth-child(4) { height: 44px; }
-.nivel:nth-child(5) { height: 52px; }
+.nivel:nth-child(1) { height: 24px; }
+.nivel:nth-child(2) { height: 32px; }
+.nivel:nth-child(3) { height: 40px; }
+
+.nivel--completado {
+  background: var(--menta-oscura, var(--menta));
+  color: var(--papel);
+}
 
 .nivel--activo {
   background: var(--menta);
+  box-shadow: 0 0 0 3px rgba(143, 224, 184, 0.35);
 }
 
 /* ---------- Cronómetro ---------- */
@@ -595,6 +776,13 @@ h2 {
   width: auto;
   margin-bottom: 0;
   white-space: nowrap;
+}
+
+.multijugador__estado {
+  margin: 10px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--texto-suave);
 }
 
 /* ============================================================

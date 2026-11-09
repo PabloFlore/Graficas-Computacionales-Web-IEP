@@ -4,10 +4,6 @@ import { MTLLoader } from 'three/addons/loaders/MTLLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 
-// Los GLB decorativos (spring, escudo, radar) usan
-// KHR_draco_mesh_compression, que el GLTFLoader no decodifica por si solo.
-// El DRACOLoader se crea una sola vez y se reutiliza: el decodificador se
-// descarga de la misma version de Three que usa el importmap.
 const dracoLoader = new DRACOLoader();
 dracoLoader.setDecoderPath('https://unpkg.com/three@0.155.0/examples/jsm/libs/draco/');
 
@@ -38,7 +34,7 @@ export function crearGestorCarga() {
   return gestor;
 }
 
-function aplicarTransformacion(objeto, nombre, escala, posicion) {
+function aplicarTransformacion(objeto, nombre, escala, posicion, rotacion) {
   if (nombre) {
     objeto.name = nombre;
   }
@@ -51,6 +47,10 @@ function aplicarTransformacion(objeto, nombre, escala, posicion) {
     objeto.position.copy(posicion);
   }
 
+  if (rotacion) {
+    objeto.rotation.copy(rotacion);
+  }
+
   return objeto;
 }
 
@@ -58,7 +58,7 @@ function aplicarTransformacion(objeto, nombre, escala, posicion) {
  * Carga un modelo OBJ + MTL. La ruta va sin extension: se le agregan
  * `.mtl` y `.obj`.
  */
-export function cargarModeloOBJ(ruta, nombre, escala = new THREE.Vector3(1, 1, 1), posicion, gestor) {
+export function cargarModeloOBJ(ruta, nombre, escala = new THREE.Vector3(1, 1, 1), posicion, rotacion, gestor) {
   return new Promise((resolve, reject) => {
     const loaderOBJ = new OBJLoader(gestor);
     const loaderMTL = new MTLLoader(gestor);
@@ -71,7 +71,7 @@ export function cargarModeloOBJ(ruta, nombre, escala = new THREE.Vector3(1, 1, 1
 
         loaderOBJ.load(
           `${ruta}.obj`,
-          (objeto) => resolve(aplicarTransformacion(objeto, nombre, escala, posicion)),
+          (objeto) => resolve(aplicarTransformacion(objeto, nombre, escala, posicion, rotacion)),
           undefined,
           (error) => reject(error)
         );
@@ -85,7 +85,7 @@ export function cargarModeloOBJ(ruta, nombre, escala = new THREE.Vector3(1, 1, 1
 /**
  * Carga un modelo GLB/GLTF. La ruta incluye la extension.
  */
-export function cargarModeloGLB(ruta, nombre, escala = new THREE.Vector3(1, 1, 1), posicion, gestor) {
+export function cargarModeloGLB(ruta, nombre, escala = new THREE.Vector3(1, 1, 1), posicion, rotacion, gestor) {
   return new Promise((resolve, reject) => {
     const loader = new GLTFLoader(gestor);
     loader.setDRACOLoader(dracoLoader);
@@ -93,9 +93,23 @@ export function cargarModeloGLB(ruta, nombre, escala = new THREE.Vector3(1, 1, 1
     loader.load(
       ruta,
       (gltf) => {
-        const objeto = aplicarTransformacion(gltf.scene, nombre, escala, posicion);
-        // Guardamos los clips para que la escena los pueda reproducir con AnimationMixer.
+        const objeto = aplicarTransformacion(gltf.scene, nombre, escala, posicion, rotacion);
         objeto.userData.animations = gltf.animations ?? [];
+        if (nombre === 'Escudo') {
+          objeto.traverse((child) => {
+            if (child.isMesh && child.material) {
+              if (Array.isArray(child.material)) {
+                child.material.forEach((mat) => {
+                  if (mat) {
+                    mat.side = THREE.DoubleSide;
+                  }
+                });
+              } else {
+                child.material.side = THREE.DoubleSide;
+              }
+            }
+          });
+        }
         resolve(objeto);
       },
       undefined,
@@ -113,8 +127,8 @@ export async function cargarModelos(lista, gestor = crearGestorCarga()) {
   const resultados = await Promise.allSettled(
     lista.map((item) =>
       item.tipo === 'obj'
-        ? cargarModeloOBJ(item.ruta, item.nombre, item.escala, item.posicion, gestor)
-        : cargarModeloGLB(item.ruta, item.nombre, item.escala, item.posicion, gestor)
+        ? cargarModeloOBJ(item.ruta, item.nombre, item.escala, item.posicion, item.rotacion, gestor)
+        : cargarModeloGLB(item.ruta, item.nombre, item.escala, item.posicion, item.rotacion, gestor)
     )
   );
 

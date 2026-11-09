@@ -12,14 +12,10 @@ import * as THREE from 'three';
  *   no trae pistas devuelve null y la escena sigue funcionando igual.
  */
 
-// Parametros por defecto del salto (en unidades y segundos).
 const ALTURA = 1.5;
 const DURACION = 0.7;
 const DURACION_ATERRIZAJE = 0.12;
-// Distancia horizontal por defecto del salto (avanza en la direccion en
-// la que mira el jugador).
 const DESPLAZAMIENTO = 1;
-// Proporciones de deformacion respecto de la escala base.
 const ESTIRAMIENTO = 0.35;
 const APLASTAMIENTO = 0.3;
 
@@ -37,15 +33,14 @@ export function crearSalto(objetoVolar, objetoEscalar = null, { altura = ALTURA,
 
   let enSalto = false;
   let t = 0;
-  // Origen (X/Z) del salto y direccion (unitaria) hacia donde avanza.
   let origenX = 0;
   let origenZ = 0;
   let dirX = 0;
   let dirZ = 0;
+  let yInicio = 0;
+  let yDestino = 0;
+  let distanciaActual = desplazamiento;
 
-  // Aplica una proporcion f (0 = neutro, 1 = deformacion maxima):
-  // estira en la subida y aplasta en la bajada, manteniendo mas o menos
-  // el volumen (lo que pierde en Y lo gana en X/Z y viceversa).
   function deformar(f, estirando) {
     if (!objetoEscalar) {
       return;
@@ -65,7 +60,7 @@ export function crearSalto(objetoVolar, objetoEscalar = null, { altura = ALTURA,
   function finalizar() {
     enSalto = false;
     t = 0;
-    objetoVolar.position.y = 0;
+    objetoVolar.position.y = yDestino;
     if (objetoEscalar) {
       objetoEscalar.scale.copy(escalaBase);
     }
@@ -76,8 +71,16 @@ export function crearSalto(objetoVolar, objetoEscalar = null, { altura = ALTURA,
    * hay uno en curso (no se encadenan saltos). Sin direccion el salto es
    * solo vertical (lo usan los avatares remotos, que reciben la X/Z por
    * paquetes de red en vez de calcular el desplazamiento local).
+   *
+   * `yBase` y `yDestino` permiten saltar sobre columnas de distinta
+   * altura: la trayectoria se apoya en una base interpolada y el grupo
+   * termina exactamente en la altura de la celda destino.
    */
-  function iniciarSalto(direccionX = 0, direccionZ = 0) {
+  function iniciarSalto(direccionX = 0, direccionZ = 0, {
+    yBase = objetoVolar.position.y,
+    yDestino: destino = yBase,
+    desplazamiento: distancia = desplazamiento
+  } = {}) {
     if (enSalto) {
       return false;
     }
@@ -85,6 +88,10 @@ export function crearSalto(objetoVolar, objetoEscalar = null, { altura = ALTURA,
     t = 0;
     origenX = objetoVolar.position.x;
     origenZ = objetoVolar.position.z;
+    yInicio = yBase;
+    yDestino = destino;
+    distanciaActual = distancia;
+    objetoVolar.position.y = yInicio;
     const magnitud = Math.hypot(direccionX, direccionZ);
     if (magnitud > 1e-6) {
       dirX = direccionX / magnitud;
@@ -98,6 +105,16 @@ export function crearSalto(objetoVolar, objetoEscalar = null, { altura = ALTURA,
 
   function estaEnSalto() {
     return enSalto;
+  }
+
+  // Corta el salto sin tocar la posicion: el llamador la reubica (por ejemplo
+  // al empezar una ronda nueva).
+  function cancelar() {
+    enSalto = false;
+    t = 0;
+    if (objetoEscalar) {
+      objetoEscalar.scale.copy(escalaBase);
+    }
   }
 
   /**
@@ -119,26 +136,20 @@ export function crearSalto(objetoVolar, objetoEscalar = null, { altura = ALTURA,
     }
 
     if (t < duracion) {
-      // Parabola: y(t) = altura * (1 - (2t/T - 1)^2).
-      // En t=0 y t=T esta en el suelo; en t=T/2 toca la altura maxima.
       const progreso = (2 * t) / duracion - 1;
-      objetoVolar.position.y = altura * (1 - progreso * progreso);
+      const base = yInicio + (yDestino - yInicio) * (t / duracion);
+      objetoVolar.position.y = base + altura * (1 - progreso * progreso);
 
-      // Desplazamiento horizontal: avanza de forma lineal desde el
-      // origen hasta origen + direccion * desplazamiento a lo largo del
-      // salto. La X/Z tambien la recorta el llamador a los limites.
-      const avance = (t / duracion) * desplazamiento;
-      objetoVolar.position.x = origenX + dirX * avance;
-      objetoVolar.position.z = origenZ + dirZ * avance;
+      if (dirX !== 0 || dirZ !== 0) {
+        const avance = (t / duracion) * distanciaActual;
+        objetoVolar.position.x = origenX + dirX * avance;
+        objetoVolar.position.z = origenZ + dirZ * avance;
+      }
 
-      // La proporcion de deformacion sigue la velocidad de la parabola:
-      // maxima al impulsarse, cero en el pico, maxima de nuevo al caer.
       const f = Math.abs(progreso);
       deformar(f, t < duracion / 2);
     } else {
-      // Aterrizaje: el suelo ya se toco (y = 0) y el aplastamiento
-      // sobreactuado se recupera hasta la escala base.
-      objetoVolar.position.y = 0;
+      objetoVolar.position.y = yDestino;
       const restante = 1 - (t - duracion) / DURACION_ATERRIZAJE;
       deformar(restante, false);
     }
@@ -146,7 +157,7 @@ export function crearSalto(objetoVolar, objetoEscalar = null, { altura = ALTURA,
     return true;
   }
 
-  return { iniciarSalto, actualizar, estaEnSalto };
+  return { iniciarSalto, actualizar, estaEnSalto, cancelar };
 }
 
 /**
@@ -156,8 +167,6 @@ export function crearSalto(objetoVolar, objetoEscalar = null, { altura = ALTURA,
  * acumulado, y devuelve `{ actualizar(delta) }`.
  */
 
-// Guarda la escala base del objeto al crear la animacion, para oscilar
-// alrededor de ella sin acumular deriva.
 function escalaBaseDe(objeto) {
   return objeto ? objeto.scale.clone() : null;
 }

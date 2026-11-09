@@ -46,36 +46,70 @@ function aplicarPreferencias(preferencias) {
   }
 }
 
+// Objeto unico de preferencias en memoria: todos los cambios se escriben
+// sobre el mismo, para que un ajuste no pise a otro al guardar.
+let actuales = null;
+
+const NIVELES_DIFICULTAD = ['facil', 'normal', 'dificil'];
+
 function escucharPreferencias() {
-  const preferencias = cargarPreferencias();
   const campoVolumen = document.getElementById('cfg-volumen');
   const campoSonido = document.getElementById('cfg-sonido');
   const campoDificultad = document.getElementById('cfg-dificultad');
 
   if (campoVolumen) {
     campoVolumen.addEventListener('input', () => {
-      preferencias.volumen = parseInt(campoVolumen.value, 10);
-      guardarPreferencias(preferencias);
+      actuales.volumen = parseInt(campoVolumen.value, 10);
+      guardarPreferencias(actuales);
     });
   }
 
   if (campoSonido) {
     campoSonido.addEventListener('change', () => {
-      preferencias.sonido = campoSonido.checked;
-      guardarPreferencias(preferencias);
+      actuales.sonido = campoSonido.checked;
+      guardarPreferencias(actuales);
     });
   }
 
   if (campoDificultad) {
     campoDificultad.addEventListener('change', () => {
-      preferencias.dificultad = campoDificultad.value;
-      guardarPreferencias(preferencias);
+      actuales.dificultad = campoDificultad.value;
+      guardarPreferencias(actuales);
     });
   }
 }
 
 export function iniciarPreferencias() {
-  const preferencias = cargarPreferencias();
-  aplicarPreferencias(preferencias);
+  actuales = cargarPreferencias();
+  aplicarPreferencias(actuales);
   escucharPreferencias();
+}
+
+/**
+ * Aplica la dificultad compartida que llega del servidor: fija el selector,
+ * guarda la preferencia local y bloquea el selector si hay jugadores
+ * conectados (en ese caso el servidor rechaza cualquier cambio).
+ */
+export function fijarDificultad(nivel, bloqueada = false) {
+  if (!NIVELES_DIFICULTAD.includes(nivel)) {
+    return;
+  }
+
+  if (!actuales) {
+    actuales = cargarPreferencias();
+  }
+
+  actuales.dificultad = nivel;
+  guardarPreferencias(actuales);
+
+  const campoDificultad = document.getElementById('cfg-dificultad');
+  if (campoDificultad) {
+    campoDificultad.value = nivel;
+    campoDificultad.disabled = bloqueada;
+  }
+
+  const nota = document.getElementById('cfg-dificultad-nota');
+  if (nota) {
+    nota.hidden = !bloqueada;
+  }
 }

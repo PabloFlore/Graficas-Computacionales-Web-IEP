@@ -1,6 +1,5 @@
 <?php
 
-// Credenciales del entorno local de desarrollo. Ajústalas a tu instalación.
 define('DB_HOST', 'localhost');
 define('DB_PORT', '3306');
 define('DB_USER', 'root');
@@ -19,38 +18,87 @@ function conexion() {
   return $mysqli;
 }
 
-function addScore($mysqli, $nombre, $score) {
+/**
+ * Cabeceras CORS para el frontend de Express. Si la peticion no trae Origin
+ * (por ejemplo, al abrir el PHP directamente), no se agrega la cabecera.
+ */
+function aplicarCors($metodos = 'GET, POST, OPTIONS') {
+  $origen = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
+  $permitido = preg_match(
+    '#^https?://(localhost|127\.0\.0\.1)(:\d+)?$#',
+    $origen
+  ) === 1;
 
-  $stmt = $mysqli->prepare("INSERT INTO score (nombre, score) VALUES (?, ?)");
-
-  if (!$stmt) {
-    echo "Error al preparar la consulta: " . $mysqli->error;
-    return;
+  if ($permitido) {
+    header('Access-Control-Allow-Origin: ' . $origen);
+    header('Vary: Origin');
   }
 
-  $stmt->bind_param("si", $nombre, $score);
+  header('Access-Control-Allow-Methods: ' . $metodos);
+  header('Access-Control-Allow-Headers: Content-Type');
+}
 
-  if ($stmt->execute()) {
-    echo "Registro Agregado Correctamente!!!";
-  } else {
-    echo "Error: " . $stmt->error;
-  }
-
-  $stmt->close();
-  $mysqli->close();
+function modoValido($modo) {
+  return in_array($modo, array('clasico', 'arcade'), true);
 }
 
 /**
- * Devuelve las mejores puntuaciones como arreglo de assoc.
+ * Inserta una puntuacion. Devuelve true o un mensaje de error.
+ * Los campos null (nivel/movimientos/tiempo y perfil) se guardan como NULL.
  */
-function registros($mysqli) {
+function addScore($mysqli, $nombre, $modo, $puntos, $nivel, $movimientos, $tiempoCima, $jugadorId, $foto, $origen) {
 
-  $stmt = $mysqli->prepare("SELECT nombre, score FROM score ORDER BY score DESC LIMIT 10");
+  $stmt = $mysqli->prepare(
+    "INSERT INTO score
+       (nombre, modo, score, nivel, movimientos, tiempo_cima, jugador_id, foto, origen)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+  );
+
+  if (!$stmt) {
+    return "Error al preparar la consulta: " . $mysqli->error;
+  }
+
+  $stmt->bind_param(
+    "ssissssss",
+    $nombre,
+    $modo,
+    $puntos,
+    $nivel,
+    $movimientos,
+    $tiempoCima,
+    $jugadorId,
+    $foto,
+    $origen
+  );
+
+  if (!$stmt->execute()) {
+    $error = "Error: " . $stmt->error;
+    $stmt->close();
+    return $error;
+  }
+
+  $stmt->close();
+  return true;
+}
+
+/**
+ * Devuelve las mejores puntuaciones de un modo como arreglo de assoc.
+ */
+function registros($mysqli, $modo = 'clasico') {
+
+  $stmt = $mysqli->prepare(
+    "SELECT nombre, score, nivel, movimientos, tiempo_cima, foto, origen
+     FROM score
+     WHERE modo = ?
+     ORDER BY score DESC, created_at DESC
+     LIMIT 10"
+  );
 
   if (!$stmt) {
     return array();
   }
 
+  $stmt->bind_param("s", $modo);
   $stmt->execute();
   $resultado = $stmt->get_result();
   $filas = array();
