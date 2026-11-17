@@ -5,6 +5,7 @@ import { iniciarMultijugador, conectarJugador, enviarPosicion, emitirEscenario }
 import { iniciarSelectorPatos } from './motor/selector-patos.js';
 import { iniciarPatoMenu } from './motor/pato-menu.js';
 import { cargarPuntuaciones } from './red/puntuaciones.js';
+import { iniciarPreviewsEscenario } from './motor/previews-escenario.js';
 
 let escenarioPendiente = 'piramide';
 let modoPendiente = 'carrera';
@@ -14,6 +15,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   iniciarFormulario();
   iniciarPatoMenu();
   cargarRankingMenu();
+  iniciarPreviewsEscenario();
 
   const escena        = await iniciarEscena({ alMoverJugador: enviarPosicion });
   const selectorPatos = iniciarSelectorPatos();

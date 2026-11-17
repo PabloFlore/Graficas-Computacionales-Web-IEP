@@ -57,41 +57,72 @@
         <li class="ranking-menu__cargando">Cargando...</li>
       </ol>
     </div>
+    <span class="marca__logo marca__logo--pie">UANL &nbsp;!&nbsp; LMAD &nbsp;!&nbsp; GRAFICAS COMPUTACIONALES EN WEB</span>
   </section>
 
   <!-- SELECCIÓN DE ESCENARIO -->
   <section id="vista-seleccion" class="vista">
-    <div class="tarjeta tarjeta--seleccion">
-      <h2 class="tarjeta__titulo">Elige escenario</h2>
-      <p class="tarjeta__nota">Todos los jugadores jugarán el mismo mapa.</p>
 
-      <div class="escenarios">
-        <button class="tarjeta-escenario tarjeta-escenario--activa" data-escenario="piramide">
-          <div class="tarjeta-escenario__preview tarjeta-escenario__preview--piramide"></div>
-          <span class="tarjeta-escenario__nombre">La Pirámide</span>
-          <span class="tarjeta-escenario__detalle">Día soleado</span>
-        </button>
-        <button class="tarjeta-escenario" data-escenario="torre">
-          <div class="tarjeta-escenario__preview tarjeta-escenario__preview--torre"></div>
-          <span class="tarjeta-escenario__nombre">La Torre</span>
-          <span class="tarjeta-escenario__detalle">Atardecer</span>
-        </button>
-        <button class="tarjeta-escenario" data-escenario="islas">
-          <div class="tarjeta-escenario__preview tarjeta-escenario__preview--islas"></div>
-          <span class="tarjeta-escenario__nombre">Las Islas</span>
-          <span class="tarjeta-escenario__detalle">Nublado</span>
-        </button>
-      </div>
+    <!-- X para regresar al menú -->
+    <button class="boton--x-cerrar" data-vista="vista-menu">✕</button>
 
-      <p class="campo__etiqueta" style="text-align:left; margin-bottom:10px;">Modo de juego</p>
-      <div class="modos">
-        <button class="boton boton--modo boton--modo-activo" data-modo="carrera">Carrera</button>
-        <button class="boton boton--modo" data-modo="rey">Rey de la cima</button>
-      </div>
-
-      <button class="boton boton--primario" id="boton-iniciar-juego">Siguiente →</button>
-      <button class="boton boton--fantasma" data-vista="vista-menu">Volver</button>
+    <!-- Modos de juego -->
+    <div class="modos">
+      <button class="boton--modo boton--modo-activo" data-modo="carrera">
+        <svg class="modo-icono" width="52" height="48" viewBox="0 0 52 48" fill="none">
+          <!-- palo de bandera -->
+          <rect x="5" y="5" width="3" height="38" rx="1.5" fill="#1f2430"/>
+          <!-- cuadros de bandera a cuadros -->
+          <rect x="8"  y="5"  width="8" height="7" fill="#1f2430"/>
+          <rect x="16" y="5"  width="8" height="7" fill="#fff" stroke="#1f2430" stroke-width="1"/>
+          <rect x="24" y="5"  width="8" height="7" fill="#1f2430"/>
+          <rect x="32" y="5"  width="8" height="7" fill="#fff" stroke="#1f2430" stroke-width="1"/>
+          <rect x="8"  y="12" width="8" height="7" fill="#fff" stroke="#1f2430" stroke-width="1"/>
+          <rect x="16" y="12" width="8" height="7" fill="#1f2430"/>
+          <rect x="24" y="12" width="8" height="7" fill="#fff" stroke="#1f2430" stroke-width="1"/>
+          <rect x="32" y="12" width="8" height="7" fill="#1f2430"/>
+          <rect x="8"  y="19" width="8" height="6" fill="#1f2430"/>
+          <rect x="16" y="19" width="8" height="6" fill="#fff" stroke="#1f2430" stroke-width="1"/>
+          <rect x="24" y="19" width="8" height="6" fill="#1f2430"/>
+          <rect x="32" y="19" width="8" height="6" fill="#fff" stroke="#1f2430" stroke-width="1"/>
+        </svg>
+        Carrera
+      </button>
+      <button class="boton--modo" data-modo="rey">
+        <svg class="modo-icono" width="52" height="58" viewBox="0 0 52 58" fill="none">
+          <!-- corona Lucide -->
+          <g transform="translate(8, -1) scale(1.5)" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z"
+              fill="#ffd45e" stroke="#1f2430" stroke-width="1.2"/>
+            <path d="M5 21h14" stroke="#1f2430" stroke-width="1.2"/>
+          </g>
+          <!-- cubo isométrico -->
+          <path d="M26 34 L40 41 L26 48 L12 41 Z" fill="#8fe0b8" stroke="#1f2430" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M12 41 L12 50 L26 57 L26 48 Z" fill="#c9885a" stroke="#1f2430" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M40 41 L40 50 L26 57 L26 48 Z" fill="#e8a878" stroke="#1f2430" stroke-width="1.5" stroke-linejoin="round"/>
+        </svg>
+        Rey de la cima
+      </button>
     </div>
+
+    <!-- Escenarios -->
+    <div class="escenarios">
+      <button class="tarjeta-escenario tarjeta-escenario--activa" data-escenario="piramide">
+        <canvas class="tarjeta-escenario__preview" id="preview-piramide"></canvas>
+        <span class="tarjeta-escenario__nombre">La Pirámide</span>
+      </button>
+      <button class="tarjeta-escenario" data-escenario="torre">
+        <canvas class="tarjeta-escenario__preview" id="preview-torre"></canvas>
+        <span class="tarjeta-escenario__nombre">La Torre</span>
+      </button>
+      <button class="tarjeta-escenario" data-escenario="islas">
+        <canvas class="tarjeta-escenario__preview" id="preview-islas"></canvas>
+        <span class="tarjeta-escenario__nombre">Las Islas</span>
+      </button>
+    </div>
+
+    <button class="boton boton--continuar" id="boton-iniciar-juego">Continuar</button>
+
   </section>
 
   <!-- SELECCIÓN DE PATO -->
@@ -277,7 +308,6 @@
     </div>
   </section>
 
-  <span class="marca__logo marca__logo--pie">UANL &nbsp;!&nbsp; LMAD &nbsp;!&nbsp; GRAFICAS COMPUTACIONALES EN WEB</span>
 
   <!-- Cliente Socket.IO (define el global `io`) -->
   <script src="/socket.io/socket.io.js"></script>

@@ -78,6 +78,7 @@ function alturaTorre(ix, iz) {
 }
 
 function alturaIslas(ix, iz) {
+  // isla principal (centro)
   const d2 = Math.max(Math.abs(ix), Math.abs(iz));
   if (d2 === 0) return 11;
   if (d2 <= 1) return 9;
@@ -85,18 +86,21 @@ function alturaIslas(ix, iz) {
   if (d2 <= 3) return 5;
   if (d2 <= 4) return 3;
   if (d2 <= 5) return 1;
-  const d1 = Math.max(Math.abs(ix + 10), Math.abs(iz));
-  if (d1 === 0) return 5;
-  if (d1 <= 1) return 4;
+  // puentes (z=0, 1 bloque de ancho)
+  if (iz === 0 && ix >= -9 && ix <= -6) return 1;
+  if (iz === 0 && ix >=  6 && ix <=  9) return 1;
+  // isla izquierda en x=-13
+  const d1 = Math.max(Math.abs(ix + 13), Math.abs(iz));
+  if (d1 === 0) return 7;
+  if (d1 <= 1) return 5;
   if (d1 <= 2) return 3;
-  if (d1 <= 3) return 2;
-  if (d1 <= 4) return 1;
-  const d3 = Math.max(Math.abs(ix - 10), Math.abs(iz));
-  if (d3 === 0) return 5;
-  if (d3 <= 1) return 4;
+  if (d1 <= 3) return 1;
+  // isla derecha en x=13
+  const d3 = Math.max(Math.abs(ix - 13), Math.abs(iz));
+  if (d3 === 0) return 7;
+  if (d3 <= 1) return 5;
   if (d3 <= 2) return 3;
-  if (d3 <= 3) return 2;
-  if (d3 <= 4) return 1;
+  if (d3 <= 3) return 1;
   return 0;
 }
 
@@ -109,13 +113,15 @@ export function obtenerAlturaFn(tipo) {
 /* -------- Constructor -------- */
 
 const NIVEL_INICIAL_PIRAMIDE = 4;
-const MAX_DYN_MINAS = 60; // extra slots for convertirEnMina()
+const MAX_DYN_MINAS = 60;
+const ELEV_POR_TIPO = { piramide: 0, torre: 0, islas: 3 };
 
 export function crearEstructura(escena, tipo = 'piramide') {
-  _setMineTopColor(_C_MINA_A); // reset mine geometry to default state
+  _setMineTopColor(_C_MINA_A);
 
   const alturaFn = obtenerAlturaFn(tipo);
-  const RANGO = tipo === 'islas' ? 14 : tipo === 'piramide' ? 10 : 5;
+  const RANGO = tipo === 'islas' ? 16 : tipo === 'piramide' ? 10 : 5;
+  const ELEVACION = ELEV_POR_TIPO[tipo] || 0;
   let _nivelMaxVisible = tipo === 'piramide' ? NIVEL_INICIAL_PIRAMIDE : 100;
 
   /* -- Single pass: collect data and count -- */
@@ -135,7 +141,7 @@ export function crearEstructura(escena, tipo = 'piramide') {
         cubeData.push({
           key, nivel, esTapa, esMina,
           wx: ix * 2, wz: iz * 2,
-          targetY: h * 2 + 1,
+          targetY: h * 2 + 1 + ELEVACION * 2,
           oculto: nivel > _nivelMaxVisible,
         });
       }
@@ -298,7 +304,7 @@ export function crearEstructura(escena, tipo = 'piramide') {
     const dynIdx = instMinas.count;
     if (dynIdx < nMinas + MAX_DYN_MINAS) {
       const h = alturaFn(ix, iz) - 1;
-      _M4.makeTranslation(ix * 2, h * 2 + 1, iz * 2);
+      _M4.makeTranslation(ix * 2, h * 2 + 1 + ELEVACION * 2, iz * 2);
       instMinas.setMatrixAt(dynIdx, _M4);
       instMinas.count = dynIdx + 1;
       instMinas.instanceMatrix.needsUpdate = true;
@@ -330,6 +336,7 @@ export function crearEstructura(escena, tipo = 'piramide') {
     convertirEnMina,
     limpiar,
     revelarNivel,
+    elevacion: ELEVACION,
     get nivelMaxVisible() { return _nivelMaxVisible; },
   };
 }

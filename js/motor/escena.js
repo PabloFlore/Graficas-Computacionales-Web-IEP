@@ -3,6 +3,7 @@ import { crearEstructura } from './piramide.js';
 import { crearPato } from './pato.js';
 import { crearExplosion } from './explosion.js';
 import { crearSistemaColeccionables } from './coleccionables.js';
+import { crearNubes } from './nubes.js';
 
 const INICIO_POR_ESCENARIO = {
   piramide: { x: 0, z: 5 },
@@ -45,12 +46,15 @@ export async function iniciarEscena({ alMoverJugador } = {}) {
   let estructura = crearEstructura(scene, 'piramide');
   let alturaFn = estructura.alturaFn;
   let escenarioActual = 'piramide';
+  let elevacion = estructura.elevacion || 0;
 
   /* Altura visible real: en pirámide se limita al nivel máximo revelado */
   function alturaEfectiva(ix, iz) {
     if (escenarioActual !== 'piramide') return alturaFn(ix, iz);
     return Math.min(alturaFn(ix, iz), estructura.nivelMaxVisible);
   }
+
+  function yMundo(ix, iz) { return alturaEfectiva(ix, iz) * 2 - 1 + elevacion * 2; }
 
   /* ---------- Jugador ---------- */
   let celdaX = 0;
@@ -63,7 +67,7 @@ export async function iniciarEscena({ alMoverJugador } = {}) {
   // Punto de seguimiento suavizado — ignora el arco vertical del salto
   let camLookX = celdaX * 2;
   let camLookZ = celdaZ * 2;
-  let camLookY = alturaEfectiva(celdaX, celdaZ) * 2 - 1;
+  let camLookY = yMundo(celdaX, celdaZ);
 
   /* ---------- Estado del juego ---------- */
   let vidas = 3;
@@ -78,7 +82,7 @@ export async function iniciarEscena({ alMoverJugador } = {}) {
   const bob = new THREE.Group();
   jugador.add(bob);
   scene.add(jugador);
-  jugador.position.set(celdaX * 2, alturaEfectiva(celdaX, celdaZ) * 2 - 1, celdaZ * 2);
+  jugador.position.set(celdaX * 2, yMundo(celdaX, celdaZ), celdaZ * 2);
 
   /* ---------- Pato ---------- */
   let pato = crearPato(patoColor, patoOjoColor);
@@ -109,6 +113,7 @@ export async function iniciarEscena({ alMoverJugador } = {}) {
 
   /* ---------- Coleccionables ---------- */
   let coleccionables = crearSistemaColeccionables(scene, alturaFn, RANGO_POR_ESCENARIO[escenarioActual]);
+  let sistemaDeNubes = crearNubes(scene, 'piramide');
   coleccionables.spawnEnNivel(1, estructura.nivelMaxVisible, 0.12);
 
   /* ---------- Celdas visitadas (para minas generativas) ---------- */
@@ -204,12 +209,12 @@ export async function iniciarEscena({ alMoverJugador } = {}) {
     celdaZ = inicio.z;
     saltando = false;
     saltoT = 0;
-    jugador.position.set(celdaX * 2, alturaEfectiva(celdaX, celdaZ) * 2 - 1, celdaZ * 2);
+    jugador.position.set(celdaX * 2, yMundo(celdaX, celdaZ), celdaZ * 2);
     camAngle  = Math.atan2(inicio.z, inicio.x);
     camTarget = camAngle;
     camLookX  = celdaX * 2;
     camLookZ  = celdaZ * 2;
-    camLookY  = alturaEfectiva(celdaX, celdaZ) * 2 - 1;
+    camLookY  = yMundo(celdaX, celdaZ);
     patoRotTarget = Math.atan2(inicio.z, -inicio.x);
     jugador.rotation.y = patoRotTarget;
     bob.visible = true;
@@ -315,7 +320,7 @@ export async function iniciarEscena({ alMoverJugador } = {}) {
     if (dz ===  1) patoRotTarget = -Math.PI / 2;
 
     saltoDesde = { x: celdaX * 2, y: jugador.position.y, z: celdaZ * 2 };
-    saltoHasta = { x: nx * 2, y: alturaEfectiva(nx, nz) * 2 - 1, z: nz * 2 };
+    saltoHasta = { x: nx * 2, y: yMundo(nx, nz), z: nz * 2 };
     celdaX = nx;
     celdaZ = nz;
 
@@ -410,6 +415,7 @@ export async function iniciarEscena({ alMoverJugador } = {}) {
 
     coleccionables.animar(delta);
     estructura.animarMinas(delta);
+    sistemaDeNubes.animar(delta);
     renderer.render(scene, camera);
     actualizarStats(delta);
   }
@@ -457,6 +463,9 @@ export async function iniciarEscena({ alMoverJugador } = {}) {
 
     estructura = crearEstructura(scene, tipo);
     alturaFn = estructura.alturaFn;
+    elevacion = estructura.elevacion || 0;
+    sistemaDeNubes.limpiar();
+    sistemaDeNubes = crearNubes(scene, tipo);
 
     coleccionables = crearSistemaColeccionables(scene, alturaFn, RANGO_POR_ESCENARIO[tipo] || 5);
     if (tipo === 'piramide') {
@@ -486,13 +495,13 @@ export async function iniciarEscena({ alMoverJugador } = {}) {
     bob.add(pato);
     bob.visible = true;
 
-    jugador.position.set(celdaX * 2, alturaEfectiva(celdaX, celdaZ) * 2 - 1, celdaZ * 2);
+    jugador.position.set(celdaX * 2, yMundo(celdaX, celdaZ), celdaZ * 2);
 
     camAngle  = Math.atan2(inicio.z, inicio.x);
     camTarget = camAngle;
     camLookX  = celdaX * 2;
     camLookZ  = celdaZ * 2;
-    camLookY  = alturaEfectiva(celdaX, celdaZ) * 2 - 1;
+    camLookY  = yMundo(celdaX, celdaZ);
     patoRotTarget = Math.atan2(inicio.z, -inicio.x);
     jugador.rotation.y = patoRotTarget;
 
