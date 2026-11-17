@@ -72,9 +72,18 @@ function engancharSeleccion(escena) {
       tarjeta.classList.add('tarjeta-escenario--activa');
     }
 
+    const mundoCard = e.target.closest('.mundo-card');
+    if (mundoCard) {
+      document.querySelectorAll('.mundo-card').forEach((c) =>
+        c.classList.remove('mundo-card--activo')
+      );
+      mundoCard.classList.add('mundo-card--activo');
+    }
+
     const botonModo = e.target.closest('.boton--modo');
     if (botonModo) {
-      document.querySelectorAll('.boton--modo').forEach((b) =>
+      const grupo = botonModo.closest('.modos');
+      grupo?.querySelectorAll('.boton--modo').forEach((b) =>
         b.classList.remove('boton--modo-activo')
       );
       botonModo.classList.add('boton--modo-activo');
@@ -83,7 +92,7 @@ function engancharSeleccion(escena) {
     const botonIniciar = e.target.closest('#boton-iniciar-juego');
     if (botonIniciar) {
       const escenarioEl = document.querySelector('.tarjeta-escenario--activa');
-      const modoEl = document.querySelector('.boton--modo-activo');
+      const modoEl = document.querySelector('#vista-seleccion .boton--modo-activo');
       escenarioPendiente = escenarioEl?.dataset.escenario || 'piramide';
       modoPendiente = modoEl?.dataset.modo || 'carrera';
       mostrarVista('vista-colores');

@@ -1,5 +1,6 @@
 import { iniciarPreferencias } from '../config/preferencias.js';
 import { cargarPuntuaciones } from '../red/puntuaciones.js';
+import { sonidoClick } from '../motor/sonidos.js';
 
 export function mostrarVista(id) {
   document.querySelectorAll('.vista').forEach((vista) => {
@@ -18,9 +19,12 @@ export function iniciarNavegacion() {
   mostrarVista('vista-menu');
 
   document.addEventListener('click', (event) => {
-    const boton = event.target.closest('[data-vista]');
-    if (boton) {
-      mostrarVista(boton.getAttribute('data-vista'));
+    const boton = event.target.closest('[data-vista], button, .boton--multi-opcion');
+    if (boton) sonidoClick();
+
+    const navBoton = event.target.closest('[data-vista]');
+    if (navBoton) {
+      mostrarVista(navBoton.getAttribute('data-vista'));
     }
   });
 

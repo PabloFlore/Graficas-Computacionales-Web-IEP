@@ -168,11 +168,50 @@ h2 {
 /* ---- Menú inicio ---- */
 #vista-menu.activa {
   flex-direction: column;
-  gap: 20px;
+  justify-content: center;
+  gap: 40px;
 }
 
-.tarjeta--menu {
-  padding-bottom: 24px;
+.menu-contenido {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+.menu-titulo {
+  font-size: 44px;
+  text-shadow: 4px 4px 0 var(--amarillo);
+}
+
+.facebook.facebook--esquina {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.boton--facebook-esquina {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px 8px 10px;
+  border-radius: 10px;
+  border: none;
+  background: #1877F2;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.boton--facebook-esquina:hover { background: #1464d0; }
+
+.sesion-facebook--menu {
+  color: rgba(255,255,255,0.75);
 }
 
 .boton--engranaje {
@@ -182,7 +221,7 @@ h2 {
   width: auto;
   background: none;
   border: none;
-  font-size: 72px;
+  font-size: 54px;
   line-height: 1;
   cursor: pointer;
   color: rgba(255,255,255,0.85);
@@ -197,16 +236,23 @@ h2 {
   transform: rotate(30deg);
 }
 
+.menu-botones {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: center;
+}
+
 .boton--comenzar {
   display: block;
-  width: 240px;
-  margin: 0 auto;
-  padding: 14px 32px;
+  width: 160px;
+  margin: 0;
+  padding: 14px 20px;
   border-radius: 50px;
   border: none;
   background: var(--menta);
   font-family: inherit;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
   color: var(--oscuro);
   cursor: pointer;
@@ -216,6 +262,10 @@ h2 {
 }
 .boton--comenzar:hover  { transform: translateY(-2px); box-shadow: 0 6px 0 var(--oscuro); }
 .boton--comenzar:active { transform: translateY(2px);  box-shadow: 0 2px 0 var(--oscuro); }
+
+.boton--comenzar--multi {
+  background: var(--amarillo);
+}
 
 /* Ranking debajo del menú */
 .ranking-menu {
@@ -825,7 +875,7 @@ h2 {
 }
 
 .boton--continuar {
-  margin-top: 20px;
+  margin-top: 56px;
   width: auto;
   padding: 14px 36px;
   border-radius: 50px;
@@ -898,11 +948,11 @@ h2 {
   transition: transform 0.18s, filter 0.18s;
 }
 
-/* Nombre en píldora blanca debajo del preview */
+/* Nombre en píldora blanca encima del preview */
 .tarjeta-escenario__nombre {
   display: block;
   width: fit-content;
-  margin: 18px auto 0;
+  margin: 0 auto 14px;
   padding: 6px 22px;
   background: #fff;
   color: #1f2430;
@@ -1031,4 +1081,264 @@ h2 {
   margin: 0;
   font-size: 13px;
   color: #ff1c42;
+}
+
+/* ============================================================
+   VISTAS MULTIJUGADOR
+   ============================================================ */
+
+/* Botón de retroceso (←) común a todas las vistas de flujo */
+.boton--atras {
+  position: absolute;
+  top: 72px;
+  left: 24px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.18);
+  border: 2px solid rgba(255,255,255,0.35);
+  color: #fff;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+.boton--atras:hover { background: rgba(255,255,255,0.32); }
+
+/* Título y subtítulo de vistas de flujo */
+.vista-titulo {
+  font-size: 28px;
+  font-weight: 900;
+  color: #fff;
+  margin: 0 0 4px;
+  text-align: center;
+  text-shadow: 0 2px 0 rgba(0,0,0,0.15);
+}
+.vista-subtitulo {
+  font-size: 16px;
+  color: rgba(255,255,255,0.85);
+  margin: 0 0 24px;
+  text-align: center;
+}
+
+/* Contenedor de contenido centrado en vistas de flujo */
+.vista-contenido {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+  max-width: 520px;
+}
+
+/* Indicador de pasos (dots) */
+.pasos-crear {
+  display: flex;
+  gap: 10px;
+}
+.paso-crear {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.3);
+  border: 2px solid rgba(255,255,255,0.5);
+}
+.paso-crear--activo {
+  background: #fff;
+}
+
+/* ── Hub multijugador ───────────────────────── */
+.multi-hub {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+}
+.multi-opciones {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
+}
+.boton--multi-opcion {
+  width: 300px;
+  padding: 22px 28px;
+  border-radius: 20px;
+  background: rgba(255,255,255,0.15);
+  border: 2px solid rgba(255,255,255,0.3);
+  color: #fff;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  transition: transform 0.15s, background 0.15s, box-shadow 0.15s;
+  text-align: left;
+}
+.boton--multi-opcion:hover {
+  transform: translateY(-2px);
+  background: rgba(255,255,255,0.22);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.18);
+}
+.boton--multi-opcion--crear {
+  background: rgba(255,212,94,0.22);
+  border-color: rgba(255,212,94,0.5);
+}
+.boton--multi-opcion--crear:hover {
+  background: rgba(255,212,94,0.32);
+}
+.multi-opcion__titulo {
+  font-size: 18px;
+  font-weight: 800;
+}
+.multi-opcion__sub {
+  font-size: 13px;
+  opacity: 0.75;
+  font-weight: 400;
+}
+
+/* ── Unirse a partida ───────────────────────── */
+.input-codigo {
+  width: 220px;
+  font-size: 28px;
+  font-family: monospace;
+  font-weight: 700;
+  letter-spacing: 10px;
+  text-align: center;
+  padding: 14px 20px;
+  border-radius: 14px;
+  border: 2px solid rgba(255,255,255,0.45);
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+  outline: none;
+  text-transform: uppercase;
+}
+.input-codigo::placeholder { opacity: 0.4; letter-spacing: 6px; }
+.input-codigo:focus { border-color: rgba(255,255,255,0.8); background: rgba(255,255,255,0.22); }
+
+.partidas-sep {
+  color: rgba(255,255,255,0.5);
+  font-size: 14px;
+}
+.partidas-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  max-width: 320px;
+}
+.partidas-lista__vacia {
+  text-align: center;
+  color: rgba(255,255,255,0.5);
+  font-size: 14px;
+  padding: 16px 0;
+}
+
+/* ── Crear: mundo ───────────────────────────── */
+.mundos-crear {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+}
+.mundo-card {
+  width: 110px;
+  height: 110px;
+  border-radius: 18px;
+  border: 3px solid transparent;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1f2430;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 12px;
+  transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+.mundo-card:hover { transform: translateY(-3px); }
+.mundo-card--activo {
+  border-color: #1f2430;
+  box-shadow: 0 4px 0 #1f2430;
+  transform: translateY(-2px);
+}
+.mundo-card--piramide { background: #6cc0f0; }
+.mundo-card--torre    { background: #ffb85e; }
+.mundo-card--islas    { background: #b8d4e0; }
+
+/* ── Crear: nombre ──────────────────────────── */
+.input-nombre-multi {
+  width: 280px;
+  text-align: center;
+  font-size: 18px;
+}
+
+/* ── Sala de espera ─────────────────────────── */
+.codigo-sala {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255,255,255,0.15);
+  border: 2px solid rgba(255,255,255,0.3);
+  border-radius: 20px;
+  padding: 20px 48px;
+}
+.codigo-sala__label {
+  font-size: 13px;
+  color: rgba(255,255,255,0.65);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.codigo-sala__valor {
+  font-size: 48px;
+  font-weight: 900;
+  font-family: monospace;
+  letter-spacing: 12px;
+  color: #fff;
+  text-shadow: 0 2px 0 rgba(0,0,0,0.2);
+}
+.boton--copiar {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.75);
+  background: none;
+  border: 1px solid rgba(255,255,255,0.35);
+  border-radius: 20px;
+  padding: 4px 16px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.boton--copiar:hover { background: rgba(255,255,255,0.15); color: #fff; }
+
+.sala-jugadores {
+  width: 100%;
+  max-width: 320px;
+}
+.sala-jugadores__lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sala-jugador {
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 12px;
+  padding: 10px 16px;
+  color: #fff;
+  font-weight: 600;
+  font-size: 15px;
+}
+.sala-jugador--anfitrion {
+  background: rgba(255,212,94,0.2);
+  border-color: rgba(255,212,94,0.4);
 }

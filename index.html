@@ -30,24 +30,32 @@
   <!-- MENÚ DE INICIO -->
   <section id="vista-menu" class="vista activa">
     <button class="boton boton--engranaje" data-vista="vista-configuraciones" title="Configuraciones">⚙</button>
-    <div class="tarjeta tarjeta--menu">
 
-      <div class="marca">
-        <canvas id="pato-menu-canvas" class="marca__pato"></canvas>
-        <h1 class="marca__titulo">Pato a la Cima</h1>
-      </div>
+    <!-- Facebook en esquina superior izquierda -->
+    <div class="facebook facebook--esquina">
+      <fb:login-button scope="public_profile,email" onlogin="checkLoginState();" style="display:none;"></fb:login-button>
+      <button class="boton--facebook-esquina" onclick="FB.login(checkLoginState, {scope:'public_profile,email'})">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047v-2.66c0-3.025 1.791-4.697 4.533-4.697 1.313 0 2.686.236 2.686.236v2.971h-1.513c-1.491 0-1.956.93-1.956 1.886v2.264h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/>
+        </svg>
+        Iniciar sesión en Facebook
+      </button>
+      <div id="sesion-facebook" class="sesion-facebook sesion-facebook--menu"></div>
+    </div>
 
-      <button class="boton boton--comenzar" data-vista="vista-seleccion">Comenzar</button>
+    <div class="menu-contenido">
+      <canvas id="pato-menu-canvas" class="marca__pato"></canvas>
+      <h1 class="vista-titulo menu-titulo">Pato a la Cima</h1>
 
-      <!-- Inicio de sesión con Facebook (SDK de JavaScript) -->
-      <div class="facebook">
-        <fb:login-button scope="public_profile,email" onlogin="checkLoginState();" style="display:none;"></fb:login-button>
-        <button class="boton boton--facebook-custom" onclick="FB.login(checkLoginState, {scope:'public_profile,email'})" title="Iniciar con Facebook">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047v-2.66c0-3.025 1.791-4.697 4.533-4.697 1.313 0 2.686.236 2.686.236v2.971h-1.513c-1.491 0-1.956.93-1.956 1.886v2.264h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/>
-          </svg>
+      <div class="multi-opciones">
+        <button class="boton--multi-opcion" data-vista="vista-seleccion">
+          <span class="multi-opcion__titulo">Solitario</span>
+          <span class="multi-opcion__sub">Juega solo y sube a la cima</span>
         </button>
-        <div id="sesion-facebook" class="sesion-facebook"></div>
+        <button class="boton--multi-opcion boton--multi-opcion--crear" data-vista="vista-multijugador">
+          <span class="multi-opcion__titulo">Multijugador</span>
+          <span class="multi-opcion__sub">Juega con amigos en tiempo real</span>
+        </button>
       </div>
     </div>
 
@@ -108,16 +116,16 @@
     <!-- Escenarios -->
     <div class="escenarios">
       <button class="tarjeta-escenario tarjeta-escenario--activa" data-escenario="piramide">
-        <canvas class="tarjeta-escenario__preview" id="preview-piramide"></canvas>
         <span class="tarjeta-escenario__nombre">La Pirámide</span>
+        <canvas class="tarjeta-escenario__preview" id="preview-piramide"></canvas>
       </button>
       <button class="tarjeta-escenario" data-escenario="torre">
-        <canvas class="tarjeta-escenario__preview" id="preview-torre"></canvas>
         <span class="tarjeta-escenario__nombre">La Torre</span>
+        <canvas class="tarjeta-escenario__preview" id="preview-torre"></canvas>
       </button>
       <button class="tarjeta-escenario" data-escenario="islas">
-        <canvas class="tarjeta-escenario__preview" id="preview-islas"></canvas>
         <span class="tarjeta-escenario__nombre">Las Islas</span>
+        <canvas class="tarjeta-escenario__preview" id="preview-islas"></canvas>
       </button>
     </div>
 
@@ -308,6 +316,144 @@
     </div>
   </section>
 
+
+  <!-- ── MULTIJUGADOR HUB ─────────────────────────────────────── -->
+  <section id="vista-multijugador" class="vista">
+    <button class="boton--atras" data-vista="vista-menu">←</button>
+    <div class="multi-hub">
+      <h2 class="vista-titulo">Multijugador</h2>
+      <div class="multi-opciones">
+        <button class="boton--multi-opcion" data-vista="vista-unirse">
+          <span class="multi-opcion__titulo">Unirse a partida</span>
+          <span class="multi-opcion__sub">Entra con un código o busca partidas</span>
+        </button>
+        <button class="boton--multi-opcion boton--multi-opcion--crear" data-vista="vista-crear-modo">
+          <span class="multi-opcion__titulo">Crear partida</span>
+          <span class="multi-opcion__sub">Personaliza la sala y espera amigos</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── UNIRSE A PARTIDA ──────────────────────────────────────── -->
+  <section id="vista-unirse" class="vista">
+    <button class="boton--atras" data-vista="vista-multijugador">←</button>
+    <div class="vista-contenido">
+      <h2 class="vista-titulo">Unirse a partida</h2>
+      <p class="vista-subtitulo">Ingresa el código de la sala</p>
+      <input class="input-codigo" type="text" id="codigo-unirse" placeholder="· · · · · ·" maxlength="6" autocomplete="off" spellcheck="false">
+      <button class="boton boton--continuar" id="boton-unirse">Unirse →</button>
+      <div class="partidas-sep">— o —</div>
+      <p class="campo__etiqueta" style="text-align:center;">Partidas detectadas</p>
+      <ul class="partidas-lista" id="partidas-detectadas">
+        <li class="partidas-lista__vacia">Buscando partidas en la red…</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ── CREAR: MODO ────────────────────────────────────────────── -->
+  <section id="vista-crear-modo" class="vista">
+    <button class="boton--atras" data-vista="vista-multijugador">←</button>
+    <div class="vista-contenido">
+      <h2 class="vista-titulo">Crear partida</h2>
+      <div class="pasos-crear">
+        <div class="paso-crear paso-crear--activo"></div>
+        <div class="paso-crear"></div>
+        <div class="paso-crear"></div>
+      </div>
+      <p class="vista-subtitulo">Elige el modo de juego</p>
+      <div class="modos">
+        <button class="boton--modo boton--modo-activo" data-modo="carrera">
+          <svg class="modo-icono" width="52" height="48" viewBox="0 0 52 48" fill="none">
+            <rect x="5" y="5" width="3" height="38" rx="1.5" fill="#1f2430"/>
+            <rect x="8"  y="5"  width="8" height="7" fill="#1f2430"/>
+            <rect x="16" y="5"  width="8" height="7" fill="#fff" stroke="#1f2430" stroke-width="1"/>
+            <rect x="24" y="5"  width="8" height="7" fill="#1f2430"/>
+            <rect x="32" y="5"  width="8" height="7" fill="#fff" stroke="#1f2430" stroke-width="1"/>
+            <rect x="8"  y="12" width="8" height="7" fill="#fff" stroke="#1f2430" stroke-width="1"/>
+            <rect x="16" y="12" width="8" height="7" fill="#1f2430"/>
+            <rect x="24" y="12" width="8" height="7" fill="#fff" stroke="#1f2430" stroke-width="1"/>
+            <rect x="32" y="12" width="8" height="7" fill="#1f2430"/>
+            <rect x="8"  y="19" width="8" height="6" fill="#1f2430"/>
+            <rect x="16" y="19" width="8" height="6" fill="#fff" stroke="#1f2430" stroke-width="1"/>
+            <rect x="24" y="19" width="8" height="6" fill="#1f2430"/>
+            <rect x="32" y="19" width="8" height="6" fill="#fff" stroke="#1f2430" stroke-width="1"/>
+          </svg>
+          Carrera
+        </button>
+        <button class="boton--modo" data-modo="rey">
+          <svg class="modo-icono" width="52" height="58" viewBox="0 0 52 58" fill="none">
+            <g transform="translate(8, -1) scale(1.5)" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z" fill="#ffd45e" stroke="#1f2430" stroke-width="1.2"/>
+              <path d="M5 21h14" stroke="#1f2430" stroke-width="1.2"/>
+            </g>
+            <path d="M26 34 L40 41 L26 48 L12 41 Z" fill="#8fe0b8" stroke="#1f2430" stroke-width="1.5" stroke-linejoin="round"/>
+            <path d="M12 41 L12 50 L26 57 L26 48 Z" fill="#c9885a" stroke="#1f2430" stroke-width="1.5" stroke-linejoin="round"/>
+            <path d="M40 41 L40 50 L26 57 L26 48 Z" fill="#e8a878" stroke="#1f2430" stroke-width="1.5" stroke-linejoin="round"/>
+          </svg>
+          Rey de la cima
+        </button>
+      </div>
+      <button class="boton boton--continuar" data-vista="vista-crear-mundo">Siguiente →</button>
+    </div>
+  </section>
+
+  <!-- ── CREAR: MUNDO ───────────────────────────────────────────── -->
+  <section id="vista-crear-mundo" class="vista">
+    <button class="boton--atras" data-vista="vista-crear-modo">←</button>
+    <div class="vista-contenido">
+      <h2 class="vista-titulo">Crear partida</h2>
+      <div class="pasos-crear">
+        <div class="paso-crear"></div>
+        <div class="paso-crear paso-crear--activo"></div>
+        <div class="paso-crear"></div>
+      </div>
+      <p class="vista-subtitulo">Elige el mundo</p>
+      <div class="mundos-crear">
+        <button class="mundo-card mundo-card--piramide mundo-card--activo" data-mundo="piramide">La Pirámide</button>
+        <button class="mundo-card mundo-card--torre" data-mundo="torre">La Torre</button>
+        <button class="mundo-card mundo-card--islas" data-mundo="islas">Las Islas</button>
+      </div>
+      <button class="boton boton--continuar" data-vista="vista-crear-nombre">Siguiente →</button>
+    </div>
+  </section>
+
+  <!-- ── CREAR: NOMBRE ─────────────────────────────────────────── -->
+  <section id="vista-crear-nombre" class="vista">
+    <button class="boton--atras" data-vista="vista-crear-mundo">←</button>
+    <div class="vista-contenido">
+      <h2 class="vista-titulo">Crear partida</h2>
+      <div class="pasos-crear">
+        <div class="paso-crear"></div>
+        <div class="paso-crear"></div>
+        <div class="paso-crear paso-crear--activo"></div>
+      </div>
+      <p class="vista-subtitulo">¿Cómo te llamas?</p>
+      <input class="formulario__campo input-nombre-multi" type="text" id="nombre-multi" placeholder="Tu nombre de jugador" autocomplete="off" maxlength="20">
+      <button class="boton boton--continuar" id="boton-crear-sala" data-vista="vista-sala-espera">Crear sala →</button>
+    </div>
+  </section>
+
+  <!-- ── SALA DE ESPERA ────────────────────────────────────────── -->
+  <section id="vista-sala-espera" class="vista">
+    <div class="vista-contenido">
+      <h2 class="vista-titulo">Sala de espera</h2>
+      <p class="vista-subtitulo">Comparte el código con tus amigos</p>
+      <div class="codigo-sala">
+        <span class="codigo-sala__label">Código</span>
+        <div class="codigo-sala__valor" id="codigo-sala-valor">QUACK</div>
+        <button class="boton--copiar" id="boton-copiar-codigo">Copiar</button>
+      </div>
+      <div class="sala-jugadores">
+        <p class="campo__etiqueta" style="text-align:center; margin-bottom:10px;">Jugadores en sala</p>
+        <ul class="sala-jugadores__lista" id="sala-jugadores-lista">
+          <li class="sala-jugador sala-jugador--anfitrion">Tú (anfitrión)</li>
+        </ul>
+      </div>
+      <button class="boton boton--primario" id="boton-iniciar-multi">¡Comenzar!</button>
+      <button class="boton boton--fantasma" data-vista="vista-menu">Cancelar</button>
+    </div>
+  </section>
 
   <!-- Cliente Socket.IO (define el global `io`) -->
   <script src="/socket.io/socket.io.js"></script>

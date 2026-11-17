@@ -299,15 +299,25 @@ export async function iniciarEscena({ alMoverJugador } = {}) {
     if (!vistaJuego.classList.contains('activa')) return;
     if (saltando || muerto) return;
 
-    let dx = 0, dz = 0;
+    let inputDX = 0, inputDZ = 0;
     const tecla = event.key;
-    if (tecla === 'a' || tecla === 'ArrowLeft')  dx = -1;
-    if (tecla === 'd' || tecla === 'ArrowRight') dx =  1;
-    if (tecla === 'w' || tecla === 'ArrowUp')    dz = -1;
-    if (tecla === 's' || tecla === 'ArrowDown')  dz =  1;
+    if (tecla === 'a' || tecla === 'ArrowLeft')  inputDX = -1;
+    if (tecla === 'd' || tecla === 'ArrowRight') inputDX =  1;
+    if (tecla === 'w' || tecla === 'ArrowUp')    inputDZ = -1;
+    if (tecla === 's' || tecla === 'ArrowDown')  inputDZ =  1;
 
     if (tecla.startsWith('Arrow')) event.preventDefault();
-    if (dx === 0 && dz === 0) return;
+    if (inputDX === 0 && inputDZ === 0) return;
+
+    // Transformar input al espacio de la cámara para que W siempre sea "hacia adelante" en pantalla
+    const fwdX = -Math.cos(camAngle);
+    const fwdZ = -Math.sin(camAngle);
+    const rgtX =  Math.sin(camAngle);
+    const rgtZ = -Math.cos(camAngle);
+    const worldX = -inputDZ * fwdX + inputDX * rgtX;
+    const worldZ = -inputDZ * fwdZ + inputDX * rgtZ;
+    const dx = Math.abs(worldX) >= Math.abs(worldZ) ? Math.round(worldX) : 0;
+    const dz = Math.abs(worldZ) >  Math.abs(worldX) ? Math.round(worldZ) : 0;
 
     const nx = celdaX + dx;
     const nz = celdaZ + dz;

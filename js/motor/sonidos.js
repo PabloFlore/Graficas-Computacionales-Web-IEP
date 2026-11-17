@@ -1,5 +1,6 @@
 // Coloca los archivos .mp3 en assets/sounds/ y descomenta cada línea.
 
+const _click    = new Audio('assets/sounds/click-sound.mp3');
 // const _cuack    = new Audio('assets/sounds/cuack.mp3');
 // const _salto    = new Audio('assets/sounds/salto.mp3');
 // const _recoger  = new Audio('assets/sounds/recoger.mp3');
@@ -13,6 +14,7 @@ function reproducir(audio) {
   audio.play().catch(() => {});
 }
 
+export function sonidoClick()    { reproducir(_click);       }
 export function sonidoCuack()    { /* reproducir(_cuack);    */ }
 export function sonidoSalto()    { /* reproducir(_salto);    */ }
 export function sonidoRecoger()  { /* reproducir(_recoger);  */ }
