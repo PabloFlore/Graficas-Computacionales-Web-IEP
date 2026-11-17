@@ -50,7 +50,7 @@
         <p class="marca__lema">Esquiva las bicicletas y llega antes que los demás.</p>
       </div>
 
-      <button class="boton boton--primario" data-vista="vista-juego">Jugar</button>
+      <button class="boton boton--primario" data-vista="vista-seleccion">Jugar</button>
       <button class="boton boton--secundario" data-vista="vista-configuraciones">Configuraciones</button>
       <button class="boton boton--terciario" data-vista="vista-puntuaciones">Puntuaciones</button>
 
@@ -71,6 +71,71 @@
     </div>
   </section>
 
+  <!-- SELECCIÓN DE ESCENARIO -->
+  <section id="vista-seleccion" class="vista">
+    <div class="tarjeta tarjeta--seleccion">
+      <h2 class="tarjeta__titulo">Elige escenario</h2>
+      <p class="tarjeta__nota">Todos los jugadores jugarán el mismo mapa.</p>
+
+      <div class="escenarios">
+        <button class="tarjeta-escenario tarjeta-escenario--activa" data-escenario="piramide">
+          <div class="tarjeta-escenario__preview tarjeta-escenario__preview--piramide"></div>
+          <span class="tarjeta-escenario__nombre">La Pirámide</span>
+          <span class="tarjeta-escenario__detalle">Día soleado</span>
+        </button>
+        <button class="tarjeta-escenario" data-escenario="torre">
+          <div class="tarjeta-escenario__preview tarjeta-escenario__preview--torre"></div>
+          <span class="tarjeta-escenario__nombre">La Torre</span>
+          <span class="tarjeta-escenario__detalle">Atardecer</span>
+        </button>
+        <button class="tarjeta-escenario" data-escenario="islas">
+          <div class="tarjeta-escenario__preview tarjeta-escenario__preview--islas"></div>
+          <span class="tarjeta-escenario__nombre">Las Islas</span>
+          <span class="tarjeta-escenario__detalle">Nublado</span>
+        </button>
+      </div>
+
+      <p class="campo__etiqueta" style="text-align:left; margin-bottom:10px;">Modo de juego</p>
+      <div class="modos">
+        <button class="boton boton--modo boton--modo-activo" data-modo="carrera">Carrera</button>
+        <button class="boton boton--modo" data-modo="rey">Rey de la cima</button>
+      </div>
+
+      <button class="boton boton--primario" id="boton-iniciar-juego">Siguiente →</button>
+      <button class="boton boton--fantasma" data-vista="vista-menu">Volver</button>
+    </div>
+  </section>
+
+  <!-- SELECCIÓN DE PATO -->
+  <section id="vista-colores" class="vista">
+    <div class="tarjeta tarjeta--patos">
+      <h2 class="tarjeta__titulo">Elige tu pato</h2>
+      <p class="tarjeta__nota">Pasa el mouse sobre cada uno para escucharlos.</p>
+
+      <div class="selector-patos" id="selector-patos">
+        <div class="pato-card pato-card--activo" data-pato="amarillo">
+          <div class="pato-card__lienzo"></div>
+          <span class="pato-card__nombre">Clásico</span>
+        </div>
+        <div class="pato-card" data-pato="blanco">
+          <div class="pato-card__lienzo"></div>
+          <span class="pato-card__nombre">Polar</span>
+        </div>
+        <div class="pato-card" data-pato="negro">
+          <div class="pato-card__lienzo"></div>
+          <span class="pato-card__nombre">Oscuro</span>
+        </div>
+        <div class="pato-card" data-pato="verde">
+          <div class="pato-card__lienzo"></div>
+          <span class="pato-card__nombre">Jungla</span>
+        </div>
+      </div>
+
+      <button class="boton boton--primario" id="boton-confirmar-color">¡Jugar!</button>
+      <button class="boton boton--fantasma" data-vista="vista-seleccion">Volver</button>
+    </div>
+  </section>
+
   <!-- PANTALLA DE JUEGO (HUD) -->
   <section id="vista-juego" class="vista escenario">
     <div class="hud">
@@ -84,6 +149,12 @@
               <div class="nivel">3</div>
               <div class="nivel">4</div>
               <div class="nivel">5</div>
+              <div class="nivel">6</div>
+              <div class="nivel">7</div>
+              <div class="nivel">8</div>
+              <div class="nivel">9</div>
+              <div class="nivel">10</div>
+              <div class="nivel">11</div>
             </div>
           </div>
 
@@ -91,9 +162,33 @@
             <span class="cronometro__tiempo">00:00</span>
             <span class="marcador__texto">Tiempo</span>
           </div>
+
+          <div class="hud__panel hud__vidas">
+            <span class="hud__etiqueta">Vidas</span>
+            <div class="corazones">
+              <span class="corazon">&#10084;</span>
+              <span class="corazon">&#10084;</span>
+              <span class="corazon">&#10084;</span>
+            </div>
+          </div>
+
+          <div class="hud__panel">
+            <span class="hud__etiqueta">Score</span>
+            <span class="hud__valor" id="hud-score">0</span>
+          </div>
         </div>
 
         <button class="boton boton--hud" data-vista="vista-pausa">Pausa</button>
+      </div>
+    </div>
+    <!-- Game Over overlay -->
+    <div id="game-over" class="game-over oculto">
+      <div class="game-over__tarjeta">
+        <h2 class="game-over__titulo">Game Over</h2>
+        <p class="game-over__linea">Score: <strong id="go-score">0</strong></p>
+        <p class="game-over__linea">Mejor: <strong id="go-mejor">0</strong></p>
+        <button class="boton boton--primario" id="boton-reintentar">Reintentar</button>
+        <button class="boton boton--fantasma" data-vista="vista-menu">Menú</button>
       </div>
     </div>
   </section>

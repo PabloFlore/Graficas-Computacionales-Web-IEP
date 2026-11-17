@@ -29,14 +29,19 @@ app.get('/', (req, res) => {
 // Multijugador: cada socket conectado es un jugador. Se identifica por
 // socket.id (no por nombre) para evitar colisiones entre nombres iguales.
 const jugadores = new Map();
+let escenarioActual = { escenario: 'piramide', modo: 'carrera' };
 
 io.on('connection', (socket) => {
   console.log('Jugador conectado:', socket.id);
 
+  socket.on('ElegirEscenario', (data) => {
+    escenarioActual = data;
+    io.emit('escenario-elegido', data);
+  });
+
   socket.on('Iniciar', (nombre) => {
-    // Al recien llegado se le manda la lista actual (sin el mismo, que
-    // todavia no esta registrado) para que dibuje a los demas.
     socket.emit('jugadores', [...jugadores.values()]);
+    socket.emit('escenario-elegido', escenarioActual);
 
     jugadores.set(socket.id, { id: socket.id, nombre, x: 0, y: 0, z: 0 });
 

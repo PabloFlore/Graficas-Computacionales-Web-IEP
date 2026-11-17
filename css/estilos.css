@@ -481,11 +481,17 @@ h2 {
   color: var(--tinta);
 }
 
-.nivel:nth-child(1) { height: 20px; }
-.nivel:nth-child(2) { height: 28px; }
-.nivel:nth-child(3) { height: 36px; }
-.nivel:nth-child(4) { height: 44px; }
-.nivel:nth-child(5) { height: 52px; }
+.nivel:nth-child(1)  { height: 14px; }
+.nivel:nth-child(2)  { height: 18px; }
+.nivel:nth-child(3)  { height: 22px; }
+.nivel:nth-child(4)  { height: 26px; }
+.nivel:nth-child(5)  { height: 30px; }
+.nivel:nth-child(6)  { height: 34px; }
+.nivel:nth-child(7)  { height: 38px; }
+.nivel:nth-child(8)  { height: 42px; }
+.nivel:nth-child(9)  { height: 46px; }
+.nivel:nth-child(10) { height: 50px; }
+.nivel:nth-child(11) { height: 56px; }
 
 .nivel--activo {
   background: var(--menta);
@@ -504,6 +510,7 @@ h2 {
   margin-bottom: 4px;
   letter-spacing: 2px;
 }
+
 
 .boton--hud {
   width: auto;
@@ -532,6 +539,135 @@ h2 {
   display: block;
   width: 90px;
   margin: 0 auto 8px;
+}
+
+/* ============================================================
+   SELECTOR DE PATO (modelos 3D)
+   ============================================================ */
+.tarjeta--patos {
+  max-width: 560px;
+}
+
+.selector-patos {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.pato-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 10px 14px;
+  background: var(--papel);
+  border: var(--borde);
+  border-radius: 12px;
+  box-shadow: var(--sombra-chica);
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  user-select: none;
+}
+
+.pato-card:hover {
+  transform: translateY(-3px);
+}
+
+.pato-card--activo {
+  background: var(--menta);
+}
+
+.pato-card__lienzo {
+  width: 170px;
+  height: 170px;
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.pato-card__lienzo canvas {
+  display: block;
+  width: 170px !important;
+  height: 170px !important;
+}
+
+.pato-card__nombre {
+  margin-top: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+/* ============================================================
+   GAME OVER OVERLAY
+   ============================================================ */
+.game-over {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(31, 36, 48, 0.82);
+  pointer-events: auto;
+}
+
+.game-over.oculto {
+  display: none;
+}
+
+.game-over__tarjeta {
+  width: 100%;
+  max-width: 340px;
+  padding: 32px;
+  background: var(--papel);
+  border: var(--borde);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+  text-align: center;
+}
+
+.game-over__titulo {
+  font-size: 36px;
+  font-weight: 700;
+  margin-bottom: 10px;
+  color: var(--rojo);
+}
+
+.game-over__linea {
+  margin: 0 0 8px;
+  font-size: 18px;
+  color: var(--texto-suave);
+}
+
+.game-over__linea strong {
+  color: var(--tinta);
+  font-size: 22px;
+}
+
+/* ============================================================
+   HUD VIDAS Y SCORE
+   ============================================================ */
+.hud__vidas .corazones {
+  display: flex;
+  gap: 4px;
+  font-size: 20px;
+}
+
+.corazon {
+  color: var(--rojo);
+  transition: opacity 0.2s;
+}
+
+.corazon--perdido {
+  opacity: 0.2;
+}
+
+.hud__valor {
+  display: block;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 1px;
 }
 
 /* ============================================================
@@ -568,6 +704,131 @@ h2 {
   .campo input[type="range"] {
     width: 100%;
   }
+}
+
+/* ============================================================
+   SELECCIÓN DE ESCENARIO
+   ============================================================ */
+.tarjeta--seleccion {
+  max-width: 580px;
+}
+
+.escenarios {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.tarjeta-escenario {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 14px 10px;
+  background: var(--papel);
+  border: var(--borde);
+  border-radius: 10px;
+  box-shadow: var(--sombra-chica);
+  cursor: pointer;
+  font: inherit;
+  color: var(--tinta);
+  text-align: center;
+  transition: filter 0.1s;
+}
+
+.tarjeta-escenario:hover {
+  filter: brightness(0.95);
+}
+
+.tarjeta-escenario--activa {
+  background: var(--menta);
+}
+
+.tarjeta-escenario__preview {
+  width: 56px;
+  height: 44px;
+  margin-bottom: 10px;
+  border: var(--borde);
+  border-radius: 6px;
+  position: relative;
+  overflow: hidden;
+}
+
+.tarjeta-escenario__preview--piramide {
+  background: var(--cielo);
+}
+.tarjeta-escenario__preview--piramide::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 20px solid transparent;
+  border-right: 20px solid transparent;
+  border-bottom: 28px solid var(--menta);
+}
+
+.tarjeta-escenario__preview--torre {
+  background: #ffb870;
+}
+.tarjeta-escenario__preview--torre::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 14px;
+  height: 32px;
+  background: var(--menta);
+  border-radius: 2px 2px 0 0;
+}
+
+.tarjeta-escenario__preview--islas {
+  background: #b8d4e0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 4px;
+  padding-bottom: 4px;
+}
+.tarjeta-escenario__preview--islas::before,
+.tarjeta-escenario__preview--islas::after {
+  content: '';
+  width: 14px;
+  background: var(--menta);
+  border-radius: 2px 2px 0 0;
+}
+.tarjeta-escenario__preview--islas::before { height: 16px; }
+.tarjeta-escenario__preview--islas::after  { height: 24px; }
+
+.tarjeta-escenario__nombre {
+  font-size: 14px;
+  font-weight: 700;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.tarjeta-escenario__detalle {
+  font-size: 11px;
+  color: var(--texto-suave);
+  display: block;
+}
+
+.modos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.modos .boton {
+  margin-bottom: 0;
+}
+
+.boton--modo-activo {
+  background: var(--amarillo);
 }
 
 /* ============================================================

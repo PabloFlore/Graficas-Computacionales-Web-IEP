@@ -1,111 +1,335 @@
 import * as THREE from 'three';
 
-// Cache de texturas por color para no crear un canvas por cada cubo.
-const _cache = {};
+/* ---- Vertex-colored geometry builders ---- */
+// Face order in BoxGeometry: +X, -X, +Y, -Y, +Z, -Z  (4 verts each = 24 total)
+// Matches original material array: [lit, shadow, top, shadow, shadow, lit]
+function _crearGeoVC(topHex, litHex, shadowHex) {
+  const geo = new THREE.BoxGeometry(2, 2, 2);
+  const n   = geo.attributes.position.count; // 24
+  const buf = new Float32Array(n * 3);
+  const cols = [
+    new THREE.Color(litHex),    // face 0: +X lit
+    new THREE.Color(shadowHex), // face 1: -X shadow
+    new THREE.Color(topHex),    // face 2: +Y top  ← changes for mines
+    new THREE.Color(shadowHex), // face 3: -Y shadow
+    new THREE.Color(shadowHex), // face 4: +Z shadow
+    new THREE.Color(litHex),    // face 5: -Z lit
+  ];
+  for (let f = 0; f < 6; f++) {
+    for (let v = 0; v < 4; v++) {
+      const i = (f * 4 + v) * 3;
+      buf[i] = cols[f].r; buf[i + 1] = cols[f].g; buf[i + 2] = cols[f].b;
+    }
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(buf, 3));
+  return geo;
+}
 
-/**
- * Genera una CanvasTexture con el color de fondo dado y un borde negro
- * dibujado sobre el canvas — la misma técnica del ejemplo de Three.js
- * con baldosas (color plano + línea de cuadrícula).
- */
-function texturaCara(color) {
-  if (_cache[color]) return _cache[color];
-
+// Border texture: white fill + dark inset stroke — multiplies with vertex colors
+// Result: face center = vertex_color × white = vertex_color; border ≈ very dark
+const _TEX_BORDE = (() => {
   const cv = document.createElement('canvas');
   cv.width = cv.height = 64;
   const ctx = cv.getContext('2d');
-
-  ctx.fillStyle = color;
+  ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, 64, 64);
-
   ctx.strokeStyle = '#1f2430';
   ctx.lineWidth = 5;
   ctx.strokeRect(2.5, 2.5, 59, 59);
+  return new THREE.CanvasTexture(cv);
+})();
 
-  const tex = new THREE.CanvasTexture(cv);
-  _cache[color] = tex;
-  return tex;
+// Shared geometry — module-level, reused across reiniciar()
+const _GEO_SEGURO  = _crearGeoVC('#8fe0b8', '#e8a878', '#c9885a');
+const _GEO_MINA    = _crearGeoVC('#ff6b57', '#e8a878', '#c9885a');
+const _GEO_OUTLINE = new THREE.BoxGeometry(2.12, 2.12, 2.12);
+const _MAT_VC      = new THREE.MeshBasicMaterial({ vertexColors: true, map: _TEX_BORDE });
+const _MAT_OUTLINE = new THREE.MeshBasicMaterial({ color: 0x1f2430, side: THREE.BackSide });
+
+const _HIDDEN = new THREE.Matrix4().makeScale(0, 0, 0);
+const _M4     = new THREE.Matrix4();
+
+// Mine blink: only the top face (+Y) = vertices 8–11 in _GEO_MINA
+const _C_MINA_A = new THREE.Color('#ff6b57');
+const _C_MINA_B = new THREE.Color('#ff9d3d');
+
+function _setMineTopColor(c) {
+  const attr = _GEO_MINA.attributes.color;
+  for (let v = 8; v < 12; v++) attr.setXYZ(v, c.r, c.g, c.b);
+  attr.needsUpdate = true;
 }
 
-// Paleta de colores según la guía visual (pág. 4 y 6 del PDF).
-const PALETA = {
-  seguro: { top: '#8fe0b8', lit: '#e8a878', shadow: '#c9885a' },
-  mina:   { top: '#ff6b57', lit: '#e8a878', shadow: '#c9885a' },
-};
+/* -------- Funciones de altura -------- */
 
-/**
- * Crea un cubo estilizado con:
- *  - Tres tonos distintos (tapa / lado iluminado / lado en sombra)
- *  - Contorno negro usando el truco BackSide (sin post-procesado)
- *
- * Orden de materiales en BoxGeometry de Three.js:
- *   0 = +x   1 = -x   2 = +y (tapa)   3 = -y (fondo)   4 = +z   5 = -z
- *
- * Con cámara en (8, 10, 8) mirando al centro, el eje +x y el eje -z
- * son los lados visibles desde "el sol de lado" (guía pág. 9).
- */
-function crearCubo(x, y, z, tipo = 'seguro') {
-  const c = PALETA[tipo] || PALETA.seguro;
-
-  const mats = [
-    new THREE.MeshBasicMaterial({ map: texturaCara(c.lit) }),    // +x  lado iluminado
-    new THREE.MeshBasicMaterial({ map: texturaCara(c.shadow) }), // -x  lado sombra
-    new THREE.MeshBasicMaterial({ map: texturaCara(c.top) }),    // +y  tapa
-    new THREE.MeshBasicMaterial({ map: texturaCara(c.shadow) }), // -y  fondo (no visible)
-    new THREE.MeshBasicMaterial({ map: texturaCara(c.shadow) }), // +z  lado sombra
-    new THREE.MeshBasicMaterial({ map: texturaCara(c.lit) }),    // -z  lado iluminado
-  ];
-
-  const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mats);
-  mesh.position.set(x, y, z);
-
-  // Contorno: mismo cubo levemente agrandado con normales volteadas.
-  // Los fragmentos que sobresalen del cubo interior quedan visibles
-  // como línea negra entre cubos adyacentes.
-  const contorno = new THREE.Mesh(
-    new THREE.BoxGeometry(1.06, 1.06, 1.06),
-    new THREE.MeshBasicMaterial({ color: 0x1f2430, side: THREE.BackSide })
-  );
-  mesh.add(contorno);
-
-  return mesh;
-}
-
-/**
- * Devuelve cuántos cubos de altura tiene la columna en (ix, iz).
- * Distancia de Chebyshev al centro → cuanto más cerca, más alta la columna.
- */
 export function alturaEn(ix, iz) {
-  return RADIO + 1 - Math.max(Math.abs(ix), Math.abs(iz));
+  const d = Math.max(Math.abs(ix), Math.abs(iz));
+  return Math.max(0, 11 - d);
 }
 
-// Radio de la base (9×9 cuadrícula, 5 niveles de altura).
-// Todas las posiciones X e Z son enteros: no hay cortes en las caras.
-const RADIO = 4;
+function alturaTorre(ix, iz) {
+  const d = Math.max(Math.abs(ix), Math.abs(iz));
+  if (d === 0) return 14;
+  if (d <= 1) return 11;
+  if (d <= 2) return 8;
+  if (d <= 3) return 5;
+  if (d <= 4) return 2;
+  if (d <= 5) return 1;
+  return 0;
+}
 
-/**
- * Construye una pirámide escalonada de 5 niveles con columnas de cubos apilados.
- * Enfoque por columna + distancia de Chebyshev: todas las posiciones son
- * enteros, por lo que cada cara lateral queda completamente visible.
- *
- * Base 9×9 (RADIO=4), cima 1×1 en el centro.
- */
-export function crearPiramide(escena) {
-  const cubos = [];
+function alturaIslas(ix, iz) {
+  const d2 = Math.max(Math.abs(ix), Math.abs(iz));
+  if (d2 === 0) return 11;
+  if (d2 <= 1) return 9;
+  if (d2 <= 2) return 7;
+  if (d2 <= 3) return 5;
+  if (d2 <= 4) return 3;
+  if (d2 <= 5) return 1;
+  const d1 = Math.max(Math.abs(ix + 10), Math.abs(iz));
+  if (d1 === 0) return 5;
+  if (d1 <= 1) return 4;
+  if (d1 <= 2) return 3;
+  if (d1 <= 3) return 2;
+  if (d1 <= 4) return 1;
+  const d3 = Math.max(Math.abs(ix - 10), Math.abs(iz));
+  if (d3 === 0) return 5;
+  if (d3 <= 1) return 4;
+  if (d3 <= 2) return 3;
+  if (d3 <= 3) return 2;
+  if (d3 <= 4) return 1;
+  return 0;
+}
 
-  for (let ix = -RADIO; ix <= RADIO; ix++) {
-    for (let iz = -RADIO; iz <= RADIO; iz++) {
-      const altura = alturaEn(ix, iz);
+export function obtenerAlturaFn(tipo) {
+  if (tipo === 'torre') return alturaTorre;
+  if (tipo === 'islas') return alturaIslas;
+  return alturaEn;
+}
 
-      for (let h = 0; h < altura; h++) {
-        // Solo la tapa de cada columna puede ser mina.
-        const esMina = h === altura - 1 && Math.random() < 0.08;
-        const cubo = crearCubo(ix, h, iz, esMina ? 'mina' : 'seguro');
-        escena.add(cubo);
-        cubos.push({ mesh: cubo, nivel: h, tipo: esMina ? 'mina' : 'seguro' });
+/* -------- Constructor -------- */
+
+const NIVEL_INICIAL_PIRAMIDE = 4;
+const MAX_DYN_MINAS = 60; // extra slots for convertirEnMina()
+
+export function crearEstructura(escena, tipo = 'piramide') {
+  _setMineTopColor(_C_MINA_A); // reset mine geometry to default state
+
+  const alturaFn = obtenerAlturaFn(tipo);
+  const RANGO = tipo === 'islas' ? 14 : tipo === 'piramide' ? 10 : 5;
+  let _nivelMaxVisible = tipo === 'piramide' ? NIVEL_INICIAL_PIRAMIDE : 100;
+
+  /* -- Single pass: collect data and count -- */
+  const cubeData = [];
+  let nSeguro = 0, nMinas = 0;
+
+  for (let ix = -RANGO; ix <= RANGO; ix++) {
+    for (let iz = -RANGO; iz <= RANGO; iz++) {
+      const hMax = alturaFn(ix, iz);
+      if (hMax <= 0) continue;
+      const key = `${ix},${iz}`;
+      for (let h = 0; h < hMax; h++) {
+        const nivel  = h + 1;
+        const esTapa = h === hMax - 1;
+        const esMina = esTapa && hMax > 1 && Math.random() < 0.03;
+        if (esMina) nMinas++; else nSeguro++;
+        cubeData.push({
+          key, nivel, esTapa, esMina,
+          wx: ix * 2, wz: iz * 2,
+          targetY: h * 2 + 1,
+          oculto: nivel > _nivelMaxVisible,
+        });
       }
     }
   }
 
-  return cubos;
+  const nTotal = cubeData.length;
+
+  /* -- InstancedMesh: 3 draw calls for the entire structure -- */
+  const instSeguro  = new THREE.InstancedMesh(_GEO_SEGURO,  _MAT_VC,      nSeguro || 1);
+  // Extra slots at the end for dynamic mine conversions
+  const instMinas   = new THREE.InstancedMesh(_GEO_MINA,    _MAT_VC,      (nMinas || 1) + MAX_DYN_MINAS);
+  const instOutline = new THREE.InstancedMesh(_GEO_OUTLINE, _MAT_OUTLINE, nTotal  || 1);
+
+  instSeguro.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  instMinas.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  instOutline.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+
+  instSeguro.count  = nSeguro;
+  instMinas.count   = nMinas;
+  instOutline.count = nTotal;
+
+  escena.add(instSeguro);
+  escena.add(instMinas);
+  escena.add(instOutline);
+
+  /* -- Tracking -- */
+  const cubosPorNivel  = new Map(); // nivel → [{sIdx or mIdx, outlineIdx, isMina, wx, wz, targetY}]
+  const cubosEnCaida   = [];
+  const minasPos       = new Set(); // "ix,iz"
+  const minasOcultas   = new Map(); // "ix,iz" → {mIdx, outlineIdx}
+  const cubosTapa      = new Map(); // "ix,iz" → {instIdx, outlineIdx, isMina}
+  const minasActiveIdx = [];        // mIdx values of active mines (for blinking)
+
+  for (let n = 1; n <= 14; n++) cubosPorNivel.set(n, []);
+
+  let sIdx = 0, mIdx = 0, oIdx = 0;
+
+  for (const c of cubeData) {
+    const { key, nivel, esTapa, esMina, wx, wz, targetY, oculto } = c;
+    const outlineIdx = oIdx++;
+    let instIdx;
+
+    if (esMina) {
+      instIdx = mIdx++;
+      if (oculto) {
+        instMinas.setMatrixAt(instIdx, _HIDDEN);
+        instOutline.setMatrixAt(outlineIdx, _HIDDEN);
+        if (esTapa) minasOcultas.set(key, { mIdx: instIdx, outlineIdx });
+      } else {
+        _M4.makeTranslation(wx, targetY, wz);
+        instMinas.setMatrixAt(instIdx, _M4);
+        instOutline.setMatrixAt(outlineIdx, _M4);
+        minasPos.add(key);
+        minasActiveIdx.push(instIdx);
+      }
+    } else {
+      instIdx = sIdx++;
+      if (oculto) {
+        instSeguro.setMatrixAt(instIdx, _HIDDEN);
+        instOutline.setMatrixAt(outlineIdx, _HIDDEN);
+      } else {
+        _M4.makeTranslation(wx, targetY, wz);
+        instSeguro.setMatrixAt(instIdx, _M4);
+        instOutline.setMatrixAt(outlineIdx, _M4);
+      }
+    }
+
+    cubosPorNivel.get(nivel)?.push({ instIdx, outlineIdx, isMina: esMina, wx, wz, targetY });
+    if (esTapa) cubosTapa.set(key, { instIdx, outlineIdx, isMina: esMina });
+  }
+
+  instSeguro.instanceMatrix.needsUpdate  = true;
+  instMinas.instanceMatrix.needsUpdate   = true;
+  instOutline.instanceMatrix.needsUpdate = true;
+
+  /* -------- Revelar nivel -------- */
+  function revelarNivel(n) {
+    if (n <= _nivelMaxVisible || n > 14) return;
+    _nivelMaxVisible = n;
+
+    (cubosPorNivel.get(n) || []).forEach((entry, i) => {
+      const startY = entry.targetY + 10 + Math.random() * 3;
+      _M4.makeTranslation(entry.wx, startY, entry.wz);
+      if (entry.isMina) instMinas.setMatrixAt(entry.instIdx, _M4);
+      else              instSeguro.setMatrixAt(entry.instIdx, _M4);
+      instOutline.setMatrixAt(entry.outlineIdx, _M4);
+      cubosEnCaida.push({ ...entry, currentY: startY, delay: i * 0.003 });
+    });
+    instSeguro.instanceMatrix.needsUpdate  = true;
+    instMinas.instanceMatrix.needsUpdate   = true;
+    instOutline.instanceMatrix.needsUpdate = true;
+
+    const toActivate = [];
+    minasOcultas.forEach(({ mIdx: mi }, key) => {
+      const [mix, miz] = key.split(',').map(Number);
+      if (alturaFn(mix, miz) === n) toActivate.push({ key, mi });
+    });
+    toActivate.forEach(({ key, mi }) => {
+      minasPos.add(key);
+      minasActiveIdx.push(mi);
+      minasOcultas.delete(key);
+    });
+  }
+
+  /* -------- Animación -------- */
+  let minaT = 0;
+  let minaVisible = true;
+
+  function animarMinas(delta) {
+    // Parpadeo: solo cambia los 4 vértices del tope en _GEO_MINA
+    if (minasActiveIdx.length > 0) {
+      minaT += delta;
+      if (minaT >= 0.4) {
+        minaT = 0;
+        minaVisible = !minaVisible;
+        _setMineTopColor(minaVisible ? _C_MINA_A : _C_MINA_B);
+      }
+    }
+
+    // Caída al revelar
+    if (cubosEnCaida.length > 0) {
+      let moved = false;
+      for (let i = cubosEnCaida.length - 1; i >= 0; i--) {
+        const f = cubosEnCaida[i];
+        f.delay -= delta;
+        if (f.delay > 0) continue;
+        f.currentY = Math.max(f.targetY, f.currentY - 12 * delta);
+        _M4.makeTranslation(f.wx, f.currentY, f.wz);
+        if (f.isMina) instMinas.setMatrixAt(f.instIdx, _M4);
+        else          instSeguro.setMatrixAt(f.instIdx, _M4);
+        instOutline.setMatrixAt(f.outlineIdx, _M4);
+        moved = true;
+        if (f.currentY <= f.targetY) cubosEnCaida.splice(i, 1);
+      }
+      if (moved) {
+        instSeguro.instanceMatrix.needsUpdate  = true;
+        instMinas.instanceMatrix.needsUpdate   = true;
+        instOutline.instanceMatrix.needsUpdate = true;
+      }
+    }
+  }
+
+  function esMina(ix, iz) {
+    if (alturaFn(ix, iz) > _nivelMaxVisible) return false;
+    return minasPos.has(`${ix},${iz}`);
+  }
+
+  function convertirEnMina(ix, iz) {
+    const key = `${ix},${iz}`;
+    if (minasPos.has(key)) return;
+    const tapa = cubosTapa.get(key);
+    if (!tapa || tapa.isMina || alturaFn(ix, iz) > _nivelMaxVisible) return;
+
+    // Hide the seguro cube
+    instSeguro.setMatrixAt(tapa.instIdx, _HIDDEN);
+    instSeguro.instanceMatrix.needsUpdate = true;
+
+    // Place a mine in the dynamic area at the end of instMinas
+    const dynIdx = instMinas.count;
+    if (dynIdx < nMinas + MAX_DYN_MINAS) {
+      const h = alturaFn(ix, iz) - 1;
+      _M4.makeTranslation(ix * 2, h * 2 + 1, iz * 2);
+      instMinas.setMatrixAt(dynIdx, _M4);
+      instMinas.count = dynIdx + 1;
+      instMinas.instanceMatrix.needsUpdate = true;
+      minasActiveIdx.push(dynIdx);
+    }
+
+    minasPos.add(key);
+    // The outline at tapa.outlineIdx stays visible at the correct position
+  }
+
+  function limpiar() {
+    escena.remove(instSeguro);
+    escena.remove(instMinas);
+    escena.remove(instOutline);
+    instSeguro.dispose();
+    instMinas.dispose();
+    instOutline.dispose();
+    cubosEnCaida.length = 0;
+    minasPos.clear();
+    minasOcultas.clear();
+    cubosTapa.clear();
+    minasActiveIdx.length = 0;
+  }
+
+  return {
+    alturaFn,
+    animarMinas,
+    esMina,
+    convertirEnMina,
+    limpiar,
+    revelarNivel,
+    get nivelMaxVisible() { return _nivelMaxVisible; },
+  };
 }
