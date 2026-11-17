@@ -9,6 +9,7 @@ import { iniciarPreviewsEscenario } from './motor/previews-escenario.js';
 
 let escenarioPendiente = 'piramide';
 let modoPendiente = 'carrera';
+let dificultadPendiente = 'normal';
 
 document.addEventListener('DOMContentLoaded', async () => {
   iniciarNavegacion();
@@ -31,6 +32,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   engancharSeleccion(escena);
   engancharColores(escena, selectorPatos);
   engancharPausa(escena);
+  engancharPanelesPausa();
 });
 
 async function cargarRankingMenu() {
@@ -90,6 +92,23 @@ function engancharSeleccion(escena) {
       botonModo.classList.add('boton--modo-activo');
       modoPendiente = botonModo.dataset.modo || 'carrera';
     }
+
+    const botonDif = e.target.closest('.boton--dificultad');
+    if (botonDif) {
+      document.querySelectorAll('.boton--dificultad').forEach((b) =>
+        b.classList.remove('boton--dificultad--activo')
+      );
+      botonDif.classList.add('boton--dificultad--activo');
+      dificultadPendiente = botonDif.dataset.dificultad || 'normal';
+    }
+
+    const nav = e.target.closest('[data-vista]');
+    if (nav?.dataset.vista === 'vista-dificultad') {
+      document.querySelectorAll('.boton--dificultad').forEach((b) =>
+        b.classList.remove('boton--dificultad--activo')
+      );
+      dificultadPendiente = null;
+    }
   });
 }
 
@@ -98,10 +117,30 @@ function engancharColores(escena, selectorPatos) {
     const botonConfirmar = e.target.closest('#boton-confirmar-color');
     if (!botonConfirmar) return;
 
+    const campoNombre = document.getElementById('nombre-jugador');
+    const nombre = campoNombre?.value.trim();
+    if (!nombre) {
+      campoNombre.classList.add('campo--error');
+      campoNombre.focus();
+      campoNombre.addEventListener('input', () => campoNombre.classList.remove('campo--error'), { once: true });
+      return;
+    }
+
     const cfg = selectorPatos.getPatolSeleccionado();
     escena.reiniciar(escenarioPendiente, cfg.colorCuerpo, cfg.colorOjo);
     emitirEscenario(escenarioPendiente, modoPendiente);
     mostrarVista('vista-juego');
+  });
+}
+
+function engancharPanelesPausa() {
+  document.getElementById('pausa-btn-config')?.addEventListener('click', () => {
+    document.querySelector('.pausa-panel--menu').hidden = true;
+    document.querySelector('.pausa-panel--config').hidden = false;
+  });
+  document.getElementById('pausa-btn-volver')?.addEventListener('click', () => {
+    document.querySelector('.pausa-panel--config').hidden = true;
+    document.querySelector('.pausa-panel--menu').hidden = false;
   });
 }
 

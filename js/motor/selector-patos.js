@@ -81,10 +81,13 @@ export function iniciarSelectorPatos() {
     camera.position.set(0, 1.8, 3.2);
     camera.lookAt(0, 1.5, 0);
 
-    scene.add(new THREE.AmbientLight(0xffffff, 0.65));
-    const sol = new THREE.DirectionalLight(0xffffff, 1.1);
+    scene.add(new THREE.AmbientLight(0xffffff, 1.1));
+    const sol = new THREE.DirectionalLight(0xffffff, 1.6);
     sol.position.set(3, 5, 3);
     scene.add(sol);
+    const frontal = new THREE.DirectionalLight(0xffffff, 0.9);
+    frontal.position.set(0, 2, 5);
+    scene.add(frontal);
 
     const pato = crearPato(cfg.colorCuerpo, cfg.colorOjo);
     pato.scale.setScalar(1.6);
@@ -93,9 +96,6 @@ export function iniciarSelectorPatos() {
     scene.add(pato);
 
     instancias.push({ renderer, scene, camera, pato });
-
-    // Sonido al pasar el mouse
-    card.addEventListener('mouseenter', () => cuak());
 
     // Seleccionar al hacer clic
     card.addEventListener('click', () => {

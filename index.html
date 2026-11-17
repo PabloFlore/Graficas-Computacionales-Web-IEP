@@ -115,17 +115,51 @@
       <button class="boton--atras" data-vista="vista-tipo-juego">←</button>
       <h2 class="vista-titulo">Elige un escenario</h2>
       <div class="escenarios">
-        <button class="tarjeta-escenario tarjeta-escenario--activa" data-escenario="piramide" data-vista="vista-colores">
+        <button class="tarjeta-escenario tarjeta-escenario--activa" data-escenario="piramide" data-vista="vista-dificultad">
           <canvas class="tarjeta-escenario__preview" id="preview-piramide"></canvas>
           <span class="tarjeta-escenario__nombre">La Pirámide</span>
         </button>
-        <button class="tarjeta-escenario" data-escenario="torre" data-vista="vista-colores">
+        <button class="tarjeta-escenario" data-escenario="torre" data-vista="vista-dificultad">
           <canvas class="tarjeta-escenario__preview" id="preview-torre"></canvas>
           <span class="tarjeta-escenario__nombre">La Torre</span>
         </button>
-        <button class="tarjeta-escenario" data-escenario="islas" data-vista="vista-colores">
+        <button class="tarjeta-escenario" data-escenario="islas" data-vista="vista-dificultad">
           <canvas class="tarjeta-escenario__preview" id="preview-islas"></canvas>
           <span class="tarjeta-escenario__nombre">Las Islas</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- DIFICULTAD -->
+  <section id="vista-dificultad" class="vista">
+    <div class="dificultad-tarjeta">
+      <button class="boton--atras" data-vista="vista-seleccion">←</button>
+      <h2 class="vista-titulo">Dificultad</h2>
+      <div class="dificultades">
+        <button class="boton--dificultad" data-dificultad="facil" data-vista="vista-colores">
+          <div class="dificultad-puntos">
+            <div class="dificultad-punto dificultad-punto--lleno"></div>
+            <div class="dificultad-punto"></div>
+            <div class="dificultad-punto"></div>
+          </div>
+          Fácil
+        </button>
+        <button class="boton--dificultad boton--dificultad--activo" data-dificultad="normal" data-vista="vista-colores">
+          <div class="dificultad-puntos">
+            <div class="dificultad-punto dificultad-punto--lleno"></div>
+            <div class="dificultad-punto dificultad-punto--lleno"></div>
+            <div class="dificultad-punto"></div>
+          </div>
+          Normal
+        </button>
+        <button class="boton--dificultad" data-dificultad="dificil" data-vista="vista-colores">
+          <div class="dificultad-puntos">
+            <div class="dificultad-punto dificultad-punto--lleno"></div>
+            <div class="dificultad-punto dificultad-punto--lleno"></div>
+            <div class="dificultad-punto dificultad-punto--lleno"></div>
+          </div>
+          Difícil
         </button>
       </div>
     </div>
@@ -221,58 +255,85 @@
 
   <!-- MENÚ DE PAUSA -->
   <section id="vista-pausa" class="vista">
-    <div class="tarjeta tarjeta--emergente">
-      <!-- Patito dormido -->
-      <svg class="tarjeta__patito" viewBox="0 0 145 125">
-        <g stroke="#1f2430" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round">
-          <path d="M17 64 L3 55 Q8 70 3 80 L19 83 Z" fill="#ffd45e" />
-          <ellipse cx="62" cy="76" rx="45" ry="28" fill="#ffd45e" />
-          <path d="M44 68 C58 55 84 59 89 74 C76 87 52 85 44 68 Z" fill="#ffe9a8" />
-          <circle cx="101" cy="42" r="23" fill="#ffd45e" />
-          <path d="M119 36 Q139 34 140 44 Q139 54 119 51 Z" fill="#ff9d3d" />
-          <path d="M98 36 Q104 41 110 36" fill="none" />
-        </g>
-      </svg>
-
-      <h2 class="tarjeta__titulo">Pausa</h2>
-      <p class="tarjeta__nota">El pato toma aire.</p>
-
-      <button class="boton boton--primario" data-vista="vista-juego">Reanudar</button>
-      <button class="boton boton--peligro" data-vista="vista-menu">Salir</button>
+    <div class="pausa-tarjeta">
+      <!-- Panel: opciones principales -->
+      <div class="pausa-panel pausa-panel--menu">
+        <h2 class="vista-titulo">Pausa</h2>
+        <button class="boton boton--primario" data-vista="vista-juego">Reanudar</button>
+        <button class="boton boton--fantasma" id="pausa-btn-config">Configuración</button>
+        <button class="boton boton--peligro" data-vista="vista-menu">Salir</button>
+      </div>
+      <!-- Panel: configuraciones dentro de pausa -->
+      <div class="pausa-panel pausa-panel--config" hidden>
+        <button class="boton--atras" id="pausa-btn-volver">←</button>
+        <h2 class="vista-titulo">Configuraciones</h2>
+        <div class="cfg-campos">
+          <div class="cfg-campo">
+            <label class="cfg-label" for="pausa-cfg-volumen">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <path d="M11 5 L6 9 H2 V15 H6 L11 19 V5Z" fill="white"/>
+                <path d="M15.54 8.46a5 5 0 0 1 0 7.07" stroke="white" stroke-width="2" stroke-linecap="round"/>
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14" stroke="white" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              Volumen
+            </label>
+            <input class="cfg-slider" type="range" id="pausa-cfg-volumen" min="0" max="100" value="80">
+          </div>
+          <div class="cfg-campo">
+            <label class="cfg-label" for="pausa-cfg-sonido">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <path d="M11 5 L6 9 H2 V15 H6 L11 19 V5Z" fill="white"/>
+                <path d="M15.54 8.46a5 5 0 0 1 0 7.07" stroke="white" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              Sonido
+            </label>
+            <label class="cfg-toggle">
+              <input type="checkbox" id="pausa-cfg-sonido" checked>
+              <span class="cfg-toggle__track"></span>
+            </label>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
   <!-- CONFIGURACIONES -->
   <section id="vista-configuraciones" class="vista">
-    <div class="tarjeta">
-      <h2 class="tarjeta__titulo">Configuraciones</h2>
-      <p class="tarjeta__nota">Tus ajustes se guardan en este navegador.</p>
-
-      <div class="campos">
-        <div class="campo">
-          <label class="campo__etiqueta" for="cfg-volumen">Volumen</label>
-          <div class="campo__control">
-            <span class="campo__icono">🔊</span>
-            <input type="range" id="cfg-volumen" min="0" max="100">
-          </div>
+    <div class="configuraciones-tarjeta">
+      <button class="boton--cerrar" data-cerrar-overlay title="Cerrar">
+        <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+          <circle cx="18" cy="18" r="18" fill="#c0392b"/>
+          <circle cx="18" cy="18" r="16" fill="#e74c3c"/>
+          <path d="M12 12 L24 24 M24 12 L12 24" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <h2 class="vista-titulo">Configuraciones</h2>
+      <div class="cfg-campos">
+        <div class="cfg-campo">
+          <label class="cfg-label" for="cfg-volumen">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <path d="M11 5 L6 9 H2 V15 H6 L11 19 V5Z" fill="white"/>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07" stroke="white" stroke-width="2" stroke-linecap="round"/>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14" stroke="white" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            Volumen
+          </label>
+          <input class="cfg-slider" type="range" id="cfg-volumen" min="0" max="100" value="80">
         </div>
-
-        <div class="campo">
-          <label class="campo__etiqueta" for="cfg-sonido">Sonido</label>
-          <input type="checkbox" id="cfg-sonido">
-        </div>
-
-        <div class="campo">
-          <label class="campo__etiqueta" for="cfg-dificultad">Dificultad</label>
-          <select id="cfg-dificultad">
-            <option value="facil">Fácil</option>
-            <option value="normal">Normal</option>
-            <option value="dificil">Difícil</option>
-          </select>
+        <div class="cfg-campo">
+          <label class="cfg-label" for="cfg-sonido">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <path d="M11 5 L6 9 H2 V15 H6 L11 19 V5Z" fill="white"/>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07" stroke="white" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            Sonido
+          </label>
+          <label class="cfg-toggle">
+            <input type="checkbox" id="cfg-sonido" checked>
+            <span class="cfg-toggle__track"></span>
+          </label>
         </div>
       </div>
-
-      <button class="boton boton--fantasma" data-vista="vista-menu">Volver</button>
     </div>
   </section>
 
@@ -313,8 +374,8 @@
 
   <!-- ── MULTIJUGADOR HUB ─────────────────────────────────────── -->
   <section id="vista-multijugador" class="vista">
-    <button class="boton--atras" data-vista="vista-menu">←</button>
     <div class="multi-hub">
+      <button class="boton--atras" data-vista="vista-menu">←</button>
       <h2 class="vista-titulo">Multijugador</h2>
       <div class="multi-opciones">
         <button class="boton--multi-opcion" data-vista="vista-unirse">
@@ -331,8 +392,8 @@
 
   <!-- ── UNIRSE A PARTIDA ──────────────────────────────────────── -->
   <section id="vista-unirse" class="vista">
-    <button class="boton--atras" data-vista="vista-multijugador">←</button>
     <div class="vista-contenido">
+      <button class="boton--atras" data-vista="vista-multijugador">←</button>
       <h2 class="vista-titulo">Unirse a partida</h2>
       <p class="vista-subtitulo">Ingresa el código de la sala</p>
       <input class="input-codigo" type="text" id="codigo-unirse" placeholder="· · · · · ·" maxlength="6" autocomplete="off" spellcheck="false">
@@ -347,8 +408,8 @@
 
   <!-- ── CREAR: MODO ────────────────────────────────────────────── -->
   <section id="vista-crear-modo" class="vista">
-    <button class="boton--atras" data-vista="vista-multijugador">←</button>
     <div class="vista-contenido">
+      <button class="boton--atras" data-vista="vista-multijugador">←</button>
       <h2 class="vista-titulo">Crear partida</h2>
       <div class="pasos-crear">
         <div class="paso-crear paso-crear--activo"></div>
@@ -357,7 +418,7 @@
       </div>
       <p class="vista-subtitulo">Elige el modo de juego</p>
       <div class="modos">
-        <button class="boton--modo boton--modo-activo" data-modo="carrera">
+        <button class="boton--modo boton--modo-activo" data-modo="carrera" data-vista="vista-crear-mundo">
           <svg class="modo-icono" width="52" height="48" viewBox="0 0 52 48" fill="none">
             <rect x="5" y="5" width="3" height="38" rx="1.5" fill="#1f2430"/>
             <rect x="8"  y="5"  width="8" height="7" fill="#1f2430"/>
@@ -375,7 +436,7 @@
           </svg>
           Carrera
         </button>
-        <button class="boton--modo" data-modo="rey">
+        <button class="boton--modo" data-modo="rey" data-vista="vista-crear-mundo">
           <svg class="modo-icono" width="52" height="58" viewBox="0 0 52 58" fill="none">
             <g transform="translate(8, -1) scale(1.5)" stroke-linecap="round" stroke-linejoin="round">
               <path d="M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z" fill="#ffd45e" stroke="#1f2430" stroke-width="1.2"/>
@@ -388,34 +449,40 @@
           Rey de la cima
         </button>
       </div>
-      <button class="boton boton--continuar" data-vista="vista-crear-mundo">Siguiente →</button>
     </div>
   </section>
 
   <!-- ── CREAR: MUNDO ───────────────────────────────────────────── -->
   <section id="vista-crear-mundo" class="vista">
-    <button class="boton--atras" data-vista="vista-crear-modo">←</button>
     <div class="vista-contenido">
+      <button class="boton--atras" data-vista="vista-crear-modo">←</button>
       <h2 class="vista-titulo">Crear partida</h2>
       <div class="pasos-crear">
         <div class="paso-crear"></div>
         <div class="paso-crear paso-crear--activo"></div>
         <div class="paso-crear"></div>
       </div>
-      <p class="vista-subtitulo">Elige el mundo</p>
-      <div class="mundos-crear">
-        <button class="mundo-card mundo-card--piramide mundo-card--activo" data-mundo="piramide">La Pirámide</button>
-        <button class="mundo-card mundo-card--torre" data-mundo="torre">La Torre</button>
-        <button class="mundo-card mundo-card--islas" data-mundo="islas">Las Islas</button>
+      <div class="escenarios">
+        <button class="tarjeta-escenario" data-escenario="piramide" data-vista="vista-crear-nombre">
+          <canvas class="tarjeta-escenario__preview" id="preview-multi-piramide"></canvas>
+          <span class="tarjeta-escenario__nombre">La Pirámide</span>
+        </button>
+        <button class="tarjeta-escenario" data-escenario="torre" data-vista="vista-crear-nombre">
+          <canvas class="tarjeta-escenario__preview" id="preview-multi-torre"></canvas>
+          <span class="tarjeta-escenario__nombre">La Torre</span>
+        </button>
+        <button class="tarjeta-escenario" data-escenario="islas" data-vista="vista-crear-nombre">
+          <canvas class="tarjeta-escenario__preview" id="preview-multi-islas"></canvas>
+          <span class="tarjeta-escenario__nombre">Las Islas</span>
+        </button>
       </div>
-      <button class="boton boton--continuar" data-vista="vista-crear-nombre">Siguiente →</button>
     </div>
   </section>
 
   <!-- ── CREAR: NOMBRE ─────────────────────────────────────────── -->
   <section id="vista-crear-nombre" class="vista">
-    <button class="boton--atras" data-vista="vista-crear-mundo">←</button>
     <div class="vista-contenido">
+      <button class="boton--atras" data-vista="vista-crear-mundo">←</button>
       <h2 class="vista-titulo">Crear partida</h2>
       <div class="pasos-crear">
         <div class="paso-crear"></div>

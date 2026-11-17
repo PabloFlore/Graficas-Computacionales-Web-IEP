@@ -2,8 +2,16 @@ import { iniciarPreferencias } from '../config/preferencias.js';
 import { cargarPuntuaciones } from '../red/puntuaciones.js';
 import { sonidoClick } from '../motor/sonidos.js';
 
+const OVERLAY_VISTAS = new Set(['vista-pausa', 'vista-configuraciones']);
+
 export function mostrarVista(id) {
-  document.querySelectorAll('.vista').forEach((vista) => {
+  if (OVERLAY_VISTAS.has(id)) {
+    document.getElementById(id)?.classList.add('activa');
+    return;
+  }
+  // Al navegar a cualquier vista normal, cerramos los overlays
+  OVERLAY_VISTAS.forEach(ov => document.getElementById(ov)?.classList.remove('activa'));
+  document.querySelectorAll('.vista:not(#vista-pausa)').forEach((vista) => {
     vista.classList.toggle('activa', vista.id === id);
   });
 
@@ -26,6 +34,10 @@ export function iniciarNavegacion() {
     if (navBoton) {
       mostrarVista(navBoton.getAttribute('data-vista'));
     }
+
+    if (event.target.closest('[data-cerrar-overlay]')) {
+      OVERLAY_VISTAS.forEach(ov => document.getElementById(ov)?.classList.remove('activa'));
+    }
   });
 
   // Escape abre/cierra la pausa mientras se está en el juego.
@@ -37,10 +49,10 @@ export function iniciarNavegacion() {
     const juego = document.getElementById('vista-juego');
     const pausa = document.getElementById('vista-pausa');
 
-    if (juego.classList.contains('activa')) {
-      mostrarVista('vista-pausa');
-    } else if (pausa.classList.contains('activa')) {
+    if (pausa.classList.contains('activa')) {
       mostrarVista('vista-juego');
+    } else if (juego.classList.contains('activa')) {
+      mostrarVista('vista-pausa');
     }
   });
 }

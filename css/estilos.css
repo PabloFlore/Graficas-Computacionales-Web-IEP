@@ -668,23 +668,60 @@ h2 {
   width: auto;
   margin: 0;
   padding: 10px 22px;
-  font-size: 15px;
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
   background: var(--papel);
 }
 
 /* ============================================================
-   MENU DE PAUSA
+   MENU DE PAUSA (overlay sobre la escena)
    ============================================================ */
+#vista-pausa {
+  display: none;
+}
 #vista-pausa.activa {
-  background: rgba(31, 36, 48, 0.78);
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #6cc0f0;
 }
 
-.tarjeta--emergente {
-  max-width: 380px;
+.pausa-tarjeta {
+  position: relative;
+  width: 420px;
+  height: 356px;
+  box-sizing: border-box;
+  background: rgba(255,255,255,0.1);
+  border: 2px solid rgba(255,255,255,0.25);
+  border-radius: 20px;
+  padding: 48px 44px 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
-
-.tarjeta--emergente .tarjeta__titulo {
-  font-size: 26px;
+.pausa-panel {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+.pausa-panel[hidden] { display: none !important; }
+.pausa-panel--config .boton--atras {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+}
+.pausa-panel--config .vista-titulo {
+  margin-bottom: 20px;
+}
+.pausa-tarjeta .boton {
+  width: 220px;
 }
 
 .tarjeta__patito {
@@ -980,18 +1017,22 @@ h2 {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 16px 24px 14px;
+  gap: 20px;
+  padding: 32px 48px 28px;
   background: rgba(255,255,255,0.12);
   border: 2px solid rgba(255,255,255,0.25);
   border-radius: 20px;
   cursor: pointer;
   color: #fff;
-  font-size: 15px;
+  font-size: 22px;
   font-weight: 700;
   font-family: inherit;
-  min-width: 150px;
+  min-width: 220px;
   transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+.modo-icono {
+  width: 80px !important;
+  height: 80px !important;
 }
 
 .boton--modo:hover {
@@ -1129,20 +1170,14 @@ h2 {
   text-align: center;
 }
 
-/* Contenedor de contenido centrado en vistas de flujo */
-.vista-contenido {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
-  width: 100%;
-  max-width: 520px;
-}
-
-/* Tarjetas de flujo solitario */
+/* Tarjetas de flujo — solitario y multijugador */
 .tipo-juego-tarjeta,
 .seleccion-tarjeta,
-.colores-tarjeta {
+.dificultad-tarjeta,
+.colores-tarjeta,
+.configuraciones-tarjeta,
+.multi-hub,
+.vista-contenido {
   position: relative;
   width: 756px;
   box-sizing: border-box;
@@ -1156,19 +1191,175 @@ h2 {
   justify-content: flex-start;
   gap: 28px;
 }
-.tipo-juego-tarjeta { height: 420px; }
+.tipo-juego-tarjeta { height: 480px; }
 .seleccion-tarjeta  { height: 480px; }
+.dificultad-tarjeta       { height: 480px; justify-content: center; }
+.configuraciones-tarjeta  { height: 380px; justify-content: center; gap: 36px; }
 .colores-tarjeta    { height: 480px; gap: 20px; }
+.multi-hub          { height: 480px; }
+.vista-contenido    { height: 480px; gap: 24px; overflow: hidden; }
 .tipo-juego-tarjeta .boton--atras,
 .seleccion-tarjeta .boton--atras,
-.colores-tarjeta .boton--atras {
+.dificultad-tarjeta .boton--atras,
+.colores-tarjeta .boton--atras,
+.multi-hub .boton--atras,
+.vista-contenido .boton--atras {
   top: 16px;
   left: 16px;
 }
 .tipo-juego-tarjeta .vista-titulo,
-.seleccion-tarjeta .vista-titulo {
+.seleccion-tarjeta .vista-titulo,
+.dificultad-tarjeta .vista-titulo,
+.multi-hub .vista-titulo,
+.vista-contenido .vista-titulo {
   margin: 0;
 }
+
+/* Botones de dificultad */
+.dificultades {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+}
+.boton--dificultad {
+  width: 180px;
+  padding: 28px 20px 22px;
+  border-radius: 18px;
+  background: rgba(255,255,255,0.1);
+  border: 2px solid rgba(255,255,255,0.22);
+  color: #fff;
+  font-family: inherit;
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  transition: transform 0.15s, background 0.15s, box-shadow 0.15s;
+}
+.boton--dificultad:hover {
+  transform: translateY(-3px);
+  background: rgba(255,255,255,0.18);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+}
+.boton--dificultad--activo {
+  background: rgba(255,255,255,0.22);
+  border-color: rgba(255,255,255,0.6);
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.2);
+}
+.dificultad-puntos {
+  display: flex;
+  gap: 7px;
+}
+.dificultad-punto {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.25);
+  border: 2px solid rgba(255,255,255,0.5);
+}
+.dificultad-punto--lleno {
+  background: #fff;
+  border-color: #fff;
+}
+
+/* ── Botón cerrar (X rojo, esquina superior derecha) ── */
+.boton--cerrar {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  line-height: 0;
+  transition: transform 0.15s;
+}
+.boton--cerrar:hover { transform: scale(1.12); }
+
+/* ── Vista configuraciones como overlay ── */
+#vista-configuraciones {
+  display: none;
+}
+#vista-configuraciones.activa {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.configuraciones-tarjeta .vista-titulo { margin: 0; }
+
+.cfg-campos {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  width: 100%;
+  max-width: 420px;
+}
+.cfg-campo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.cfg-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 600;
+}
+.cfg-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 200px;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255,255,255,0.3);
+  outline: none;
+  cursor: pointer;
+}
+.cfg-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  cursor: pointer;
+}
+/* Toggle switch */
+.cfg-toggle { position: relative; display: inline-block; width: 52px; height: 28px; cursor: pointer; }
+.cfg-toggle input { opacity: 0; width: 0; height: 0; }
+.cfg-toggle__track {
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.25);
+  border: 2px solid rgba(255,255,255,0.4);
+  transition: background 0.2s;
+}
+.cfg-toggle__track::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.6);
+  transition: left 0.2s, background 0.2s;
+}
+.cfg-toggle input:checked + .cfg-toggle__track { background: rgba(100,220,120,0.6); border-color: rgba(100,220,120,0.8); }
+.cfg-toggle input:checked + .cfg-toggle__track::after { left: 27px; background: #fff; }
 .colores-tarjeta .vista-titulo {
   margin: 4rem 0 0;
 }
@@ -1222,6 +1413,18 @@ h2 {
   border-color: rgba(255,255,255,0.7) !important;
   background: rgba(255,255,255,0.22) !important;
 }
+.colores-tarjeta .formulario__campo.campo--error {
+  border-color: #ff6b6b !important;
+  background: rgba(255,107,107,0.15) !important;
+  animation: sacudir 0.35s ease;
+}
+@keyframes sacudir {
+  0%,100% { transform: translateX(0); }
+  20%      { transform: translateX(-6px); }
+  40%      { transform: translateX(6px); }
+  60%      { transform: translateX(-4px); }
+  80%      { transform: translateX(4px); }
+}
 
 .colores-tarjeta .formulario__campo::placeholder {
   color: rgba(255,255,255,0.45);
@@ -1231,7 +1434,7 @@ h2 {
   display: flex !important;
   flex-direction: row;
   gap: 36px;
-  margin-top: -12px;
+  margin-top: 18px;
   margin-bottom: 0;
   justify-content: center;
 }
@@ -1251,6 +1454,7 @@ h2 {
 .colores-tarjeta .pato-card--activo {
   background: none !important;
   transform: translateY(-6px);
+  filter: drop-shadow(0 0 10px rgba(255,255,255,0.9)) drop-shadow(0 0 20px rgba(255,255,255,0.5));
 }
 .colores-tarjeta .pato-card--activo .pato-card__nombre {
   color: #fff;
@@ -1304,12 +1508,6 @@ h2 {
 }
 
 /* ── Hub multijugador ───────────────────────── */
-.multi-hub {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 32px;
-}
 .multi-opciones {
   display: flex;
   flex-direction: column;

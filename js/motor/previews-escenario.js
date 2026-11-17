@@ -145,7 +145,10 @@ function _render(id, cubos, camPos, lookAt, zoom, skyHex, nubePos) {
 export function iniciarPreviewsEscenario() {
   const camPos = [20, 18, 20];
 
-  try { _render('preview-piramide', _cubos_piramide(), camPos,       [0, 3, 0], 10, SKY.piramide, []); } catch(e) { console.error('preview-piramide', e); }
-  try { _render('preview-torre',    _cubos_torre(),    camPos,       [0, 7, 0], 12, SKY.torre,    []); } catch(e) { console.error('preview-torre',    e); }
-  try { _render('preview-islas',    _cubos_islas(), [18, 16, 18], [-4, 1, 5], 20, SKY.islas,    []); } catch(e) { console.error('preview-islas',    e); }
+  try { _render('preview-piramide',       _cubos_piramide(), camPos,       [0, 3, 0], 10, SKY.piramide, []); } catch(e) { console.error('preview-piramide', e); }
+  try { _render('preview-torre',          _cubos_torre(),    camPos,       [0, 7, 0], 12, SKY.torre,    []); } catch(e) { console.error('preview-torre',    e); }
+  try { _render('preview-islas',          _cubos_islas(), [18, 16, 18], [-4, 1, 5], 20, SKY.islas,    []); } catch(e) { console.error('preview-islas',    e); }
+  try { _render('preview-multi-piramide', _cubos_piramide(), camPos,       [0, 3, 0], 10, SKY.piramide, []); } catch(e) { console.error('preview-multi-piramide', e); }
+  try { _render('preview-multi-torre',    _cubos_torre(),    camPos,       [0, 7, 0], 12, SKY.torre,    []); } catch(e) { console.error('preview-multi-torre',    e); }
+  try { _render('preview-multi-islas',    _cubos_islas(), [18, 16, 18], [-4, 1, 5], 20, SKY.islas,    []); } catch(e) { console.error('preview-multi-islas',    e); }
 }
