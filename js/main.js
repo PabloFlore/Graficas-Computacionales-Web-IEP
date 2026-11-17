@@ -3,6 +3,8 @@ import { iniciarEscena } from './motor/escena.js';
 import { iniciarFormulario } from './red/formulario.js';
 import { iniciarMultijugador, conectarJugador, enviarPosicion, emitirEscenario } from './red/multijugador.js';
 import { iniciarSelectorPatos } from './motor/selector-patos.js';
+import { iniciarPatoMenu } from './motor/pato-menu.js';
+import { cargarPuntuaciones } from './red/puntuaciones.js';
 
 let escenarioPendiente = 'piramide';
 let modoPendiente = 'carrera';
@@ -10,6 +12,8 @@ let modoPendiente = 'carrera';
 document.addEventListener('DOMContentLoaded', async () => {
   iniciarNavegacion();
   iniciarFormulario();
+  iniciarPatoMenu();
+  cargarRankingMenu();
 
   const escena        = await iniciarEscena({ alMoverJugador: enviarPosicion });
   const selectorPatos = iniciarSelectorPatos();
@@ -26,6 +30,24 @@ document.addEventListener('DOMContentLoaded', async () => {
   engancharColores(escena, selectorPatos);
   engancharPausa(escena);
 });
+
+async function cargarRankingMenu() {
+  const lista = document.getElementById('ranking-menu-lista');
+  if (!lista) return;
+  try {
+    const res = await fetch('/api/scores');
+    const scores = await res.json();
+    if (scores.length === 0) {
+      lista.innerHTML = '<li class="ranking-menu__cargando">Sin puntuaciones aún</li>';
+      return;
+    }
+    lista.innerHTML = scores
+      .map((s, i) => `<li>${String(i + 1).padStart(2, '0')}. ${s.nombre.padEnd(12, ' ')} ${String(s.puntos).padStart(6, ' ')} pts</li>`)
+      .join('');
+  } catch {
+    lista.innerHTML = '<li class="ranking-menu__cargando">No disponible</li>';
+  }
+}
 
 function engancharConexion() {
   const boton = document.getElementById('boton-conectar');

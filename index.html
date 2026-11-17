@@ -29,45 +29,33 @@
 
   <!-- MENÚ DE INICIO -->
   <section id="vista-menu" class="vista activa">
-    <div class="tarjeta">
+    <button class="boton boton--engranaje" data-vista="vista-configuraciones" title="Configuraciones">⚙</button>
+    <div class="tarjeta tarjeta--menu">
+
       <div class="marca">
-        <span class="marca__logo">Gráficas Computacionales</span>
-
-        <!-- Pato despierto: misma estructura que el SVG de pausa pero con ojo abierto -->
-        <svg class="marca__pato" viewBox="0 0 145 125" xmlns="http://www.w3.org/2000/svg">
-          <g stroke="#1f2430" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round">
-            <path d="M17 64 L3 55 Q8 70 3 80 L19 83 Z" fill="#ffd45e" />
-            <ellipse cx="62" cy="76" rx="45" ry="28" fill="#ffd45e" />
-            <path d="M44 68 C58 55 84 59 89 74 C76 87 52 85 44 68 Z" fill="#ffe9a8" />
-            <circle cx="101" cy="42" r="23" fill="#ffd45e" />
-            <path d="M119 36 Q139 34 140 44 Q139 54 119 51 Z" fill="#ff9d3d" />
-            <circle cx="108" cy="38" r="5" fill="#1f2430" />
-            <circle cx="110" cy="36" r="2" fill="#ffffff" />
-          </g>
-        </svg>
-
+        <canvas id="pato-menu-canvas" class="marca__pato"></canvas>
         <h1 class="marca__titulo">Pato a la Cima</h1>
-        <p class="marca__lema">Esquiva las bicicletas y llega antes que los demás.</p>
       </div>
 
-      <button class="boton boton--primario" data-vista="vista-seleccion">Jugar</button>
-      <button class="boton boton--secundario" data-vista="vista-configuraciones">Configuraciones</button>
-      <button class="boton boton--terciario" data-vista="vista-puntuaciones">Puntuaciones</button>
-
-      <!-- Conexión multijugador -->
-      <div class="multijugador">
-        <label class="campo__etiqueta" for="nombre-jugador">Jugador en línea</label>
-        <div class="multijugador__fila">
-          <input class="formulario__campo" type="text" id="nombre-jugador" placeholder="Tu nombre" autocomplete="off">
-          <button class="boton boton--secundario" id="boton-conectar" type="button">Conectar</button>
-        </div>
-      </div>
+      <button class="boton boton--comenzar" data-vista="vista-seleccion">Comenzar</button>
 
       <!-- Inicio de sesión con Facebook (SDK de JavaScript) -->
       <div class="facebook">
-        <fb:login-button scope="public_profile,email" onlogin="checkLoginState();"></fb:login-button>
+        <fb:login-button scope="public_profile,email" onlogin="checkLoginState();" style="display:none;"></fb:login-button>
+        <button class="boton boton--facebook-custom" onclick="FB.login(checkLoginState, {scope:'public_profile,email'})" title="Iniciar con Facebook">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047v-2.66c0-3.025 1.791-4.697 4.533-4.697 1.313 0 2.686.236 2.686.236v2.971h-1.513c-1.491 0-1.956.93-1.956 1.886v2.264h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/>
+          </svg>
+        </button>
         <div id="sesion-facebook" class="sesion-facebook"></div>
       </div>
+    </div>
+
+    <div class="ranking-menu">
+      <p class="ranking-menu__titulo">— TOP 10 —</p>
+      <ol class="ranking-menu__lista" id="ranking-menu-lista">
+        <li class="ranking-menu__cargando">Cargando...</li>
+      </ol>
     </div>
   </section>
 
@@ -129,6 +117,11 @@
           <div class="pato-card__lienzo"></div>
           <span class="pato-card__nombre">Jungla</span>
         </div>
+      </div>
+
+      <div class="campo campo--nombre-jugador">
+        <label class="campo__etiqueta" for="nombre-jugador">Tu nombre</label>
+        <input class="formulario__campo" type="text" id="nombre-jugador" placeholder="Escribe tu nombre" autocomplete="off" maxlength="20">
       </div>
 
       <button class="boton boton--primario" id="boton-confirmar-color">¡Jugar!</button>
@@ -283,6 +276,8 @@
       <button class="boton boton--fantasma" data-vista="vista-menu">Volver</button>
     </div>
   </section>
+
+  <span class="marca__logo marca__logo--pie">UANL &nbsp;!&nbsp; LMAD &nbsp;!&nbsp; GRAFICAS COMPUTACIONALES EN WEB</span>
 
   <!-- Cliente Socket.IO (define el global `io`) -->
   <script src="/socket.io/socket.io.js"></script>

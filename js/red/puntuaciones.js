@@ -1,83 +1,46 @@
-/**
- * Puntuaciones y envío de scores contra el WebService PHP (Apache/MySQL).
- *
- * El backend corre en Apache (puerto 80), no en Express, porque el codigo
- * PHP no puede ejecutarse desde Node. Ver api/apache-alias.conf.
- */
-const API_BASE = 'http://localhost/api';
+const API_SCORES = '/api/scores';
 
-/**
- * Carga las puntuaciones desde el backend (PHP/MySQL) y actualiza la tabla HTML.
- */
 export async function cargarPuntuaciones() {
-    const tbody = document.querySelector('#tabla-puntuaciones tbody');
-    if (!tbody) return;
+  const tbody = document.querySelector('#tabla-puntuaciones tbody');
+  if (!tbody) return;
 
-  // Renderizar estado de carga
-    tbody.innerHTML = `
-        <tr>
-            <td colspan="2" style="text-align: center;">Cargando puntuaciones...</td>
-        </tr>
-    `;
+  tbody.innerHTML = '<tr><td colspan="2" style="text-align:center;">Cargando...</td></tr>';
 
-try {
-    const respuesta = await fetch(`${API_BASE}/puntuaciones.php`);
-    if (!respuesta.ok) throw new Error('Error al obtener datos');
+  try {
+    const res = await fetch(API_SCORES);
+    if (!res.ok) throw new Error('Error al obtener datos');
+    const scores = await res.json();
 
-    const puntuaciones = await respuesta.json();
-
-    // Limpiar tabla
     tbody.innerHTML = '';
 
-    if (puntuaciones.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="2" style="text-align: center;">No hay puntuaciones registradas</td></tr>`;
-        return;
+    if (scores.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="2" style="text-align:center;">No hay puntuaciones registradas</td></tr>';
+      return;
     }
 
-    // Insertar registros dinámicamente
-    puntuaciones.forEach((registro, index) => {
-        const tr = document.createElement('tr');
-        const posicion = index + 1;
-        const claseMedalla = posicion <= 3 ? `medalla` : '';
-
-    tr.innerHTML = `
-        <td>
-            ${posicion <= 3 ? `<span class="${claseMedalla}">${posicion}</span>` : `${posicion}. `}
-            ${registro.nombre}
-        </td>
-        <td>${registro.puntos} pts</td>
-    `;
-        tbody.appendChild(tr);
+    scores.forEach((r, i) => {
+      const tr = document.createElement('tr');
+      const pos = i + 1;
+      tr.innerHTML = `
+        <td>${pos <= 3 ? `<span class="medalla">${pos}</span>` : `${pos}. `}${r.nombre}</td>
+        <td>${r.puntos} pts</td>
+      `;
+      tbody.appendChild(tr);
     });
-
-} catch (error) {
-    console.error('Error cargando puntuaciones:', error);
-    tbody.innerHTML = `
-        <tr>
-            <td colspan="2" style="text-align: center; color: #ff1c42;">
-                Error al cargar las puntuaciones.
-            </td>
-        </tr>
-    `;
-    }
+  } catch {
+    tbody.innerHTML = '<tr><td colspan="2" style="text-align:center;color:#ff1c42;">Error al cargar las puntuaciones.</td></tr>';
+  }
 }
 
-/**
- * Envía un score al WebService PHP (INSERT en MySQL).
- * Devuelve true si el registro se guardó correctamente.
- */
-export async function enviarPuntuacion(nombre, score) {
-    const datos = new URLSearchParams({
-        nombre: nombre,
-        score: score
-    });
-
-    const respuesta = await fetch(`${API_BASE}/WebServices.php?${datos.toString()}`);
-    const texto = await respuesta.text();
-
-    if (!texto.includes('Correctamente')) {
-        throw new Error(texto || 'No se pudo guardar la puntuación.');
-    }
-
-    return true;
+export async function enviarPuntuacion(nombre, puntos) {
+  const res = await fetch(API_SCORES, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nombre, puntos: Number(puntos) }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || 'No se pudo guardar la puntuación.');
+  }
+  return true;
 }

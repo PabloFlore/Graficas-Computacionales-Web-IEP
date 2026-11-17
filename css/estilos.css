@@ -70,6 +70,7 @@ h2 {
   border-radius: var(--radio);
   box-shadow: var(--sombra);
   text-align: center;
+  position: relative;
 }
 
 .tarjeta__titulo {
@@ -135,6 +136,16 @@ h2 {
   border-radius: 99px;
 }
 
+.marca__logo--pie {
+  position: fixed;
+  bottom: 14px;
+  left: 16px;
+  margin: 0;
+  font-size: 9px;
+  letter-spacing: 1px;
+  z-index: 10;
+}
+
 .marca__titulo {
   font-size: 42px;
   font-weight: 700;
@@ -144,14 +155,99 @@ h2 {
 
 .marca__pato {
   display: block;
-  width: 150px;
-  margin: 0 auto 10px;
+  width: 210px;
+  margin: -12px auto -8px;
 }
 
 .marca__lema {
   margin: 12px 0 0;
   color: var(--texto-suave);
   font-size: 15px;
+}
+
+/* ---- Menú inicio ---- */
+#vista-menu.activa {
+  flex-direction: column;
+  gap: 20px;
+}
+
+.tarjeta--menu {
+  padding-bottom: 24px;
+}
+
+.boton--engranaje {
+  position: fixed;
+  top: 18px;
+  right: 22px;
+  width: auto;
+  background: none;
+  border: none;
+  font-size: 72px;
+  line-height: 1;
+  cursor: pointer;
+  color: rgba(255,255,255,0.85);
+  text-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  transition: transform 0.2s, color 0.2s;
+  z-index: 100;
+  padding: 0;
+  margin: 0;
+}
+.boton--engranaje:hover {
+  color: #ffffff;
+  transform: rotate(30deg);
+}
+
+.boton--comenzar {
+  display: block;
+  width: 240px;
+  margin: 0 auto;
+  padding: 14px 32px;
+  border-radius: 50px;
+  border: none;
+  background: var(--menta);
+  font-family: inherit;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--oscuro);
+  cursor: pointer;
+  border: var(--borde);
+  transition: transform 0.1s, box-shadow 0.1s;
+  box-shadow: 0 4px 0 var(--oscuro);
+}
+.boton--comenzar:hover  { transform: translateY(-2px); box-shadow: 0 6px 0 var(--oscuro); }
+.boton--comenzar:active { transform: translateY(2px);  box-shadow: 0 2px 0 var(--oscuro); }
+
+/* Ranking debajo del menú */
+.ranking-menu {
+  text-align: center;
+  color: #ffffff;
+  font-family: 'Courier New', Courier, monospace;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.6), 0 0 12px rgba(0,0,0,0.3);
+}
+
+.ranking-menu__titulo {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  margin-bottom: 8px;
+}
+
+.ranking-menu__lista {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.9;
+}
+
+.ranking-menu__lista li {
+  letter-spacing: 1px;
+}
+
+.ranking-menu__cargando {
+  font-size: 12px;
+  font-weight: 700;
 }
 
 /* ============================================================
@@ -176,6 +272,12 @@ h2 {
 .campo__etiqueta {
   font-size: 16px;
   font-weight: 600;
+}
+
+.campo--nombre-jugador {
+  margin: 12px auto 4px;
+  max-width: 280px;
+  text-align: left;
 }
 
 .campo__control {
@@ -866,6 +968,23 @@ h2 {
   padding-top: 18px;
   border-top: var(--borde);
 }
+
+.boton--facebook-custom {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: none;
+  background: #1877F2;
+  color: #ffffff;
+  cursor: pointer;
+  margin-bottom: 0;
+  transition: background 0.15s;
+  padding: 0;
+}
+.boton--facebook-custom:hover { background: #1464d0; }
 
 .sesion-facebook {
   display: flex;
