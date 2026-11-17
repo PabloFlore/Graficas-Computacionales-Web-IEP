@@ -1,0 +1,76 @@
+# DEVLOG — Pato a la Cima
+
+Historial de cambios y decisiones de desarrollo.
+
+---
+
+## 2026-11-17
+
+### HUD en juego
+- Quitado el panel grande de escalera de niveles (`.niveles` con 11 barras)
+- Reemplazado por texto flotante `1 / 11` sin recuadro, blanco con sombra
+- Score también sin recuadro, mismo estilo
+- Solo el cronómetro mantiene el cuadro blanco (centrado en la barra superior)
+- Panel de Vidas eliminado; los 3 corazones ahora flotan a la izquierda del botón Pausa (estilo Mario Bros), tamaño 40px
+- `escena.js → actualizarHUD()`: ya no toglea clases `.nivel`, ahora actualiza `#hud-nivel-actual` con textContent
+
+### Estandarización de tarjetas de menú
+- Todas las tarjetas de flujo unificadas a `height: 480px` (antes dificultad-tarjeta y multi-hub eran 420px)
+- Añadido `overflow: hidden` a `.vista-contenido` para evitar desbordamiento en vista-unirse
+
+---
+
+## 2026-11-10 al 2026-11-16
+
+### Rediseño completo de UI de menús
+Commit: `6c8a399`
+
+**Selector de patos (`js/motor/selector-patos.js`)**
+- Patos renderizados de perfil lateral (`rotation.y = 0`, cámara en `(0, 1.8, 3.2)`)
+- Escala aumentada a `1.6`, más iluminación (AmbientLight 1.1 + 2 DirectionalLights)
+- Sin sonido al pasar el mouse
+- Aura blanca al seleccionar (`drop-shadow` en CSS, sin recuadro)
+- Render estático (sin RAF loop)
+
+**Sistema de overlays (`js/util/navegacion.js`)**
+- `OVERLAY_VISTAS = new Set(['vista-pausa', 'vista-configuraciones'])`
+- Los overlays se apilan sobre la vista activa en lugar de reemplazarla
+- Atributo `data-cerrar-overlay` para cerrar overlays sin navegar
+
+**Nueva vista de dificultad**
+- Insertada entre selección de escenario y selección de pato
+- 3 botones: Fácil / Normal / Difícil con indicadores de puntos
+- Al retroceder desde selección de pato se limpia la selección de dificultad
+
+**Pausa rediseñada**
+- Fondo sólido `#6cc0f0` (azul opaco)
+- Dos paneles dentro de la misma tarjeta: menú principal y configuraciones
+- Panel config se abre en la misma tarjeta con botón ← en esquina superior izquierda
+- `CSS: .pausa-panel[hidden] { display: none !important }` para override de flex
+
+**Configuraciones como overlay**
+- Se abre sobre cualquier vista con `z-index: 110`
+- Botón X rojo en esquina superior derecha (`data-cerrar-overlay`)
+- Solo Volumen y Sonido (se quitó Dificultad)
+
+**Validación de nombre**
+- Campo nombre obligatorio antes de iniciar partida
+- Animación `sacudir` + borde rojo si está vacío
+
+**Otros**
+- Botones de modo duplicados en tamaño (padding 32px 48px, font-size 22px, íconos 80px)
+- Vistas multijugador con mismo glassmorphism que solitario
+- Tarjetas de escenario en vista crear-mundo usan previews 3D con Three.js
+
+---
+
+## Pendiente
+
+| Tarea | Prioridad |
+|---|---|
+| Condición de victoria (llegar al nivel 11) | Alta |
+| Conectar dificultad a lógica del juego | Alta |
+| 3 objetos especiales / power-ups | Alta (rubro) |
+| Música de fondo | Media (rubro) |
+| Sonidos de juego (cuak, salto, recoger, mina) | Media |
+| Verificar colisiones en los 3 escenarios | Media |

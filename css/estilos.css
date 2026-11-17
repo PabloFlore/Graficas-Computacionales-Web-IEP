@@ -614,39 +614,31 @@ h2 {
   color: var(--texto-suave);
 }
 
-.niveles {
+.hud__flotante {
   display: flex;
-  align-items: flex-end;
-  gap: 4px;
+  flex-direction: column;
 }
 
-.nivel {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  font-size: 10px;
+.hud__flotante .hud__etiqueta {
+  color: rgba(255,255,255,0.75);
+  text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+.hud__nivel-texto {
+  font-size: 28px;
   font-weight: 700;
-  background: var(--gris);
-  border: 2px solid var(--tinta);
-  border-radius: 4px;
-  color: var(--tinta);
+  line-height: 1;
+  letter-spacing: 1px;
+  color: #fff;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.35);
 }
 
-.nivel:nth-child(1)  { height: 14px; }
-.nivel:nth-child(2)  { height: 18px; }
-.nivel:nth-child(3)  { height: 22px; }
-.nivel:nth-child(4)  { height: 26px; }
-.nivel:nth-child(5)  { height: 30px; }
-.nivel:nth-child(6)  { height: 34px; }
-.nivel:nth-child(7)  { height: 38px; }
-.nivel:nth-child(8)  { height: 42px; }
-.nivel:nth-child(9)  { height: 46px; }
-.nivel:nth-child(10) { height: 50px; }
-.nivel:nth-child(11) { height: 56px; }
-
-.nivel--activo {
-  background: var(--menta);
+.hud__flotante .hud__valor {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.35);
 }
 
 /* ---------- Cronómetro ---------- */
@@ -836,19 +828,28 @@ h2 {
 /* ============================================================
    HUD VIDAS Y SCORE
    ============================================================ */
-.hud__vidas .corazones {
+.hud__derecha {
   display: flex;
-  gap: 4px;
-  font-size: 20px;
+  align-items: center;
+  gap: 40px;
+}
+
+.hud__derecha .corazones {
+  display: flex;
+  gap: 8px;
 }
 
 .corazon {
+  font-size: 40px;
   color: var(--rojo);
-  transition: opacity 0.2s;
+  line-height: 1;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.25);
+  transition: opacity 0.2s, transform 0.15s;
 }
 
 .corazon--perdido {
   opacity: 0.2;
+  transform: scale(0.85);
 }
 
 .hud__valor {

@@ -201,44 +201,30 @@
     <div class="hud">
       <div class="hud__fila">
         <div class="hud__grupo">
-          <div class="hud__panel">
+          <div class="hud__flotante">
             <span class="hud__etiqueta">Nivel</span>
-            <div class="niveles">
-              <div class="nivel nivel--activo">1</div>
-              <div class="nivel">2</div>
-              <div class="nivel">3</div>
-              <div class="nivel">4</div>
-              <div class="nivel">5</div>
-              <div class="nivel">6</div>
-              <div class="nivel">7</div>
-              <div class="nivel">8</div>
-              <div class="nivel">9</div>
-              <div class="nivel">10</div>
-              <div class="nivel">11</div>
-            </div>
+            <span class="hud__nivel-texto"><span id="hud-nivel-actual">1</span> / <span id="hud-nivel-total">11</span></span>
           </div>
 
-          <div class="hud__panel cronometro">
-            <span class="cronometro__tiempo">00:00</span>
-            <span class="marcador__texto">Tiempo</span>
-          </div>
-
-          <div class="hud__panel hud__vidas">
-            <span class="hud__etiqueta">Vidas</span>
-            <div class="corazones">
-              <span class="corazon">&#10084;</span>
-              <span class="corazon">&#10084;</span>
-              <span class="corazon">&#10084;</span>
-            </div>
-          </div>
-
-          <div class="hud__panel">
+          <div class="hud__flotante">
             <span class="hud__etiqueta">Score</span>
             <span class="hud__valor" id="hud-score">0</span>
           </div>
         </div>
 
-        <button class="boton boton--hud" data-vista="vista-pausa">Pausa</button>
+        <div class="hud__panel cronometro">
+          <span class="cronometro__tiempo">00:00</span>
+          <span class="marcador__texto">Tiempo</span>
+        </div>
+
+        <div class="hud__derecha">
+          <div class="corazones">
+            <span class="corazon">&#10084;</span>
+            <span class="corazon">&#10084;</span>
+            <span class="corazon">&#10084;</span>
+          </div>
+          <button class="boton boton--hud" data-vista="vista-pausa">Pausa</button>
+        </div>
       </div>
     </div>
     <!-- Game Over overlay -->

@@ -163,13 +163,11 @@ export async function iniciarEscena({ alMoverJugador } = {}) {
   }
 
   /* ---------- HUD niveles ---------- */
-  const nivelesEls = document.querySelectorAll('.nivel');
+  const elNivelActual = document.getElementById('hud-nivel-actual');
 
   function actualizarHUD() {
     const nivelActual = Math.min(11, alturaEfectiva(celdaX, celdaZ));
-    nivelesEls.forEach((el, i) => {
-      el.classList.toggle('nivel--activo', i + 1 === nivelActual);
-    });
+    if (elNivelActual) elNivelActual.textContent = nivelActual;
   }
 
   /* ---------- HUD vidas ---------- */
