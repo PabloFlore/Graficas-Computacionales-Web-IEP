@@ -70,6 +70,7 @@ function engancharSeleccion(escena) {
         t.classList.remove('tarjeta-escenario--activa')
       );
       tarjeta.classList.add('tarjeta-escenario--activa');
+      escenarioPendiente = tarjeta.dataset.escenario || 'piramide';
     }
 
     const mundoCard = e.target.closest('.mundo-card');
@@ -87,15 +88,7 @@ function engancharSeleccion(escena) {
         b.classList.remove('boton--modo-activo')
       );
       botonModo.classList.add('boton--modo-activo');
-    }
-
-    const botonIniciar = e.target.closest('#boton-iniciar-juego');
-    if (botonIniciar) {
-      const escenarioEl = document.querySelector('.tarjeta-escenario--activa');
-      const modoEl = document.querySelector('#vista-seleccion .boton--modo-activo');
-      escenarioPendiente = escenarioEl?.dataset.escenario || 'piramide';
-      modoPendiente = modoEl?.dataset.modo || 'carrera';
-      mostrarVista('vista-colores');
+      modoPendiente = botonModo.dataset.modo || 'carrera';
     }
   });
 }

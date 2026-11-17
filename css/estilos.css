@@ -730,16 +730,16 @@ h2 {
 }
 
 .pato-card__lienzo {
-  width: 170px;
-  height: 170px;
+  width: 140px;
+  height: 140px;
   overflow: hidden;
   border-radius: 8px;
 }
 
 .pato-card__lienzo canvas {
   display: block;
-  width: 170px !important;
-  height: 170px !important;
+  width: 140px !important;
+  height: 140px !important;
 }
 
 .pato-card__nombre {
@@ -931,9 +931,11 @@ h2 {
 }
 
 .tarjeta-escenario:hover .tarjeta-escenario__preview {
-  transform: scale(1.07);
+  transform: scale(1.5);
   filter: drop-shadow(0 0 10px rgba(255, 212, 94, 0.75)) drop-shadow(0 0 24px rgba(255, 212, 94, 0.35));
 }
+
+
 
 .tarjeta-escenario--activa .tarjeta-escenario__preview {
   transform: scale(1.04);
@@ -948,11 +950,11 @@ h2 {
   transition: transform 0.18s, filter 0.18s;
 }
 
-/* Nombre en píldora blanca encima del preview */
+/* Nombre en píldora blanca debajo del preview */
 .tarjeta-escenario__nombre {
   display: block;
   width: fit-content;
-  margin: 0 auto 14px;
+  margin: 56px auto 0;
   padding: 6px 22px;
   background: #fff;
   color: #1f2430;
@@ -969,6 +971,9 @@ h2 {
   display: flex;
   gap: 28px;
   justify-content: center;
+}
+.tipo-juego-tarjeta .modos {
+  margin-top: 60px;
 }
 
 .boton--modo {
@@ -1090,7 +1095,7 @@ h2 {
 /* Botón de retroceso (←) común a todas las vistas de flujo */
 .boton--atras {
   position: absolute;
-  top: 72px;
+  top: 24px;
   left: 24px;
   width: 44px;
   height: 44px;
@@ -1132,6 +1137,154 @@ h2 {
   gap: 20px;
   width: 100%;
   max-width: 520px;
+}
+
+/* Tarjetas de flujo solitario */
+.tipo-juego-tarjeta,
+.seleccion-tarjeta,
+.colores-tarjeta {
+  position: relative;
+  width: 756px;
+  box-sizing: border-box;
+  background: rgba(255,255,255,0.08);
+  border: 2px solid rgba(255,255,255,0.22);
+  border-radius: 20px;
+  padding: 68px 48px 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 28px;
+}
+.tipo-juego-tarjeta { height: 420px; }
+.seleccion-tarjeta  { height: 480px; }
+.colores-tarjeta    { height: 480px; gap: 20px; }
+.tipo-juego-tarjeta .boton--atras,
+.seleccion-tarjeta .boton--atras,
+.colores-tarjeta .boton--atras {
+  top: 16px;
+  left: 16px;
+}
+.tipo-juego-tarjeta .vista-titulo,
+.seleccion-tarjeta .vista-titulo {
+  margin: 0;
+}
+.colores-tarjeta .vista-titulo {
+  margin: 4rem 0 0;
+}
+
+/* ============================================================
+   VISTA SELECCIÓN DE PATO (con tarjeta)
+   ============================================================ */
+#vista-colores.activa {
+  flex-direction: column;
+  gap: 0;
+  position: relative;
+}
+
+.colores-tarjeta .campo--nombre-jugador {
+  margin: 0 auto;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  width: auto;
+  max-width: none;
+}
+
+.colores-tarjeta .campo__etiqueta {
+  color: rgba(255,255,255,0.9) !important;
+  display: block;
+  white-space: nowrap;
+  margin-bottom: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.colores-tarjeta .formulario__campo {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 240px !important;
+  background: rgba(255,255,255,0.15) !important;
+  border: 2px solid rgba(255,255,255,0.35) !important;
+  border-radius: 10px !important;
+  color: #fff !important;
+  font-size: 16px;
+  padding: 10px 16px !important;
+  text-align: left;
+  box-sizing: border-box;
+  outline: none;
+}
+.colores-tarjeta .formulario__campo:focus {
+  border-color: rgba(255,255,255,0.7) !important;
+  background: rgba(255,255,255,0.22) !important;
+}
+
+.colores-tarjeta .formulario__campo::placeholder {
+  color: rgba(255,255,255,0.45);
+}
+
+.colores-tarjeta .selector-patos {
+  display: flex !important;
+  flex-direction: row;
+  gap: 36px;
+  margin-top: -12px;
+  margin-bottom: 0;
+  justify-content: center;
+}
+
+/* Patos sin recuadro */
+.colores-tarjeta .pato-card {
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  opacity: 1;
+  transition: transform 0.15s;
+}
+.colores-tarjeta .pato-card:hover {
+  transform: translateY(-4px);
+}
+.colores-tarjeta .pato-card--activo {
+  background: none !important;
+  transform: translateY(-6px);
+}
+.colores-tarjeta .pato-card--activo .pato-card__nombre {
+  color: #fff;
+  font-weight: 700;
+}
+.colores-tarjeta .pato-card__nombre {
+  color: rgba(255,255,255,0.85);
+  margin-top: 10px;
+}
+
+#vista-colores #boton-confirmar-color {
+  position: absolute;
+  top: calc(50% + 240px + 52px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90px;
+  height: 90px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 15px;
+  line-height: 1.2;
+  background: #2e9e36 !important;
+  border: none !important;
+  box-shadow: 0 6px 0 #1a5c1e, 0 8px 16px rgba(0,0,0,0.4) !important;
+  color: #fff !important;
+  transition: transform 0.08s, box-shadow 0.08s;
+}
+#vista-colores #boton-confirmar-color:hover {
+  background: #38b841 !important;
+  box-shadow: 0 6px 0 #1a5c1e, 0 10px 20px rgba(0,0,0,0.45) !important;
+}
+#vista-colores #boton-confirmar-color:active {
+  transform: translateX(-50%) translateY(4px);
+  box-shadow: 0 2px 0 #1a5c1e, 0 4px 8px rgba(0,0,0,0.3) !important;
 }
 
 /* Indicador de pasos (dots) */

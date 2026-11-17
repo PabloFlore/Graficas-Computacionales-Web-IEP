@@ -68,7 +68,7 @@ export function iniciarSelectorPatos() {
     const lienzo = card.querySelector('.pato-card__lienzo');
     if (!lienzo) return;
 
-    const W = 170, H = 170;
+    const W = 140, H = 140;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(W, H);
@@ -77,9 +77,9 @@ export function iniciarSelectorPatos() {
     lienzo.appendChild(renderer.domElement);
 
     const scene  = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(36, W / H, 0.1, 100);
-    camera.position.set(1.6, 2.1, 2.6);
-    camera.lookAt(0, 0.6, 0);
+    const camera = new THREE.PerspectiveCamera(40, W / H, 0.1, 100);
+    camera.position.set(0, 1.8, 3.2);
+    camera.lookAt(0, 1.5, 0);
 
     scene.add(new THREE.AmbientLight(0xffffff, 0.65));
     const sol = new THREE.DirectionalLight(0xffffff, 1.1);
@@ -87,10 +87,12 @@ export function iniciarSelectorPatos() {
     scene.add(sol);
 
     const pato = crearPato(cfg.colorCuerpo, cfg.colorOjo);
-    pato.scale.setScalar(1.15);
+    pato.scale.setScalar(1.6);
+    pato.position.y = 0.3;
+    pato.rotation.y = 0;
     scene.add(pato);
 
-    instancias.push({ renderer, scene, camera, pato, phase: index * (Math.PI / 2) });
+    instancias.push({ renderer, scene, camera, pato });
 
     // Sonido al pasar el mouse
     card.addEventListener('mouseenter', () => cuak());
@@ -102,17 +104,10 @@ export function iniciarSelectorPatos() {
     });
   });
 
-  /* ---------- Loop compartido ---------- */
-  function loop() {
-    requestAnimationFrame(loop);
-    const t = performance.now() / 1000;
-    instancias.forEach((inst) => {
-      inst.pato.position.y = 0.45 + Math.sin(t * 2.2 + inst.phase) * 0.11;
-      inst.pato.rotation.y = t * 0.75;
-      inst.renderer.render(inst.scene, inst.camera);
-    });
-  }
-  loop();
+  /* ---------- Render estático ---------- */
+  instancias.forEach((inst) => {
+    inst.renderer.render(inst.scene, inst.camera);
+  });
 
   return {
     getPatolSeleccionado() {
