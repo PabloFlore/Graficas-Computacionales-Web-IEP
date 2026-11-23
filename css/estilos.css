@@ -57,7 +57,9 @@ h2 {
   align-items: center;
   justify-content: center;
   min-height: 100vh;
+  min-height: 100dvh;
   padding: 32px 20px;
+  overflow-y: auto;
 }
 
 /* ---------- Tarjeta: la "ventana" de cada pantalla ---------- */
@@ -155,7 +157,9 @@ h2 {
 
 .marca__pato {
   display: block;
-  width: 210px;
+  width: clamp(120px, 40vw, 210px);
+  height: auto;
+  aspect-ratio: 210 / 160;
   margin: -12px auto -8px;
 }
 
@@ -168,8 +172,8 @@ h2 {
 /* ---- Menú inicio ---- */
 #vista-menu.activa {
   flex-direction: column;
-  justify-content: center;
-  gap: 40px;
+  justify-content: safe center;
+  gap: clamp(16px, 4vh, 40px);
 }
 
 .menu-contenido {
@@ -179,8 +183,8 @@ h2 {
   gap: 24px;
 }
 
-.menu-titulo {
-  font-size: 44px;
+#vista-menu .menu-titulo {
+  font-size: clamp(30px, 8vw, 44px);
   text-shadow: 4px 4px 0 var(--amarillo);
 }
 
@@ -286,7 +290,8 @@ h2 {
   background: rgba(255, 255, 255, 0.18);
   border-radius: 14px;
   overflow: hidden;
-  min-width: 240px;
+  width: min(340px, 100%);
+  min-width: 0;
   color: #ffffff;
   font-family: 'Fredoka', 'Trebuchet MS', sans-serif;
 }
@@ -351,6 +356,20 @@ h2 {
   padding: 8px 12px;
   color: #ffffff;
   opacity: 0.7;
+}
+
+.ranking-menu__ver-mas {
+  display: none;
+  margin: 10px auto 0;
+  padding: 6px 16px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 999px;
+  cursor: pointer;
 }
 
 /* ============================================================
@@ -1003,6 +1022,16 @@ h2 {
 /* ============================================================
    RESPONSIVO
    ============================================================ */
+@media (max-width: 768px) {
+  .vista.activa {
+    padding: 24px 16px;
+  }
+
+  #vista-menu.activa {
+    gap: 24px;
+  }
+}
+
 @media (max-width: 560px) {
   .marca__titulo {
     font-size: 32px;
@@ -1017,8 +1046,52 @@ h2 {
     flex-direction: column;
   }
 
+  #vista-menu.activa {
+    padding-top: 64px;
+  }
+
+  #vista-menu .menu-titulo {
+    text-shadow: 3px 3px 0 var(--amarillo);
+  }
+
+  .facebook.facebook--esquina {
+    top: 12px;
+    left: 12px;
+  }
+
+  .boton--facebook-esquina {
+    padding: 6px 10px 6px 8px;
+    font-size: 11px;
+  }
+
+  .boton--engranaje {
+    top: 10px;
+    right: 12px;
+    font-size: 40px;
+  }
+
   .marca__pato {
-    width: 120px;
+    width: clamp(110px, 34vw, 140px);
+  }
+
+  .ranking-menu__lista li:nth-child(n+6) {
+    display: none;
+  }
+
+  .ranking-menu__lista--expandida li:nth-child(n+6) {
+    display: flex;
+  }
+
+  .ranking-menu__ver-mas--visible {
+    display: inline-block;
+  }
+
+  .marca__logo--pie {
+    position: static;
+    display: block;
+    margin: 4px auto 0;
+    font-size: 8px;
+    text-align: center;
   }
 
   .tarjeta {
@@ -1033,6 +1106,38 @@ h2 {
   .campo__control,
   .campo input[type="range"] {
     width: 100%;
+  }
+}
+
+@media (max-width: 380px) {
+  .vista.activa {
+    padding: 24px 12px;
+  }
+
+  .multi-opciones {
+    gap: 10px;
+  }
+
+  .boton--multi-opcion {
+    padding: 14px 16px;
+  }
+
+  .multi-opcion__titulo {
+    font-size: 16px;
+  }
+
+  .multi-opcion__sub {
+    font-size: 11px;
+  }
+
+  .boton--facebook-esquina {
+    font-size: 10px;
+    gap: 5px;
+  }
+
+  .boton--facebook-esquina svg {
+    width: 15px;
+    height: 15px;
   }
 }
 
@@ -1654,10 +1759,12 @@ h2 {
   flex-direction: column;
   gap: 16px;
   align-items: center;
+  width: 100%;
+  max-width: 300px;
 }
 .boton--multi-opcion {
-  width: 300px;
-  padding: 22px 28px;
+  width: 100%;
+  padding: clamp(14px, 3vw, 22px) clamp(16px, 4vw, 28px);
   border-radius: 20px;
   background: rgba(255,255,255,0.15);
   border: 2px solid rgba(255,255,255,0.3);

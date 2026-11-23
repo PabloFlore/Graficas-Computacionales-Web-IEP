@@ -8,8 +8,6 @@ export function iniciarPatoMenu() {
   const W = 210, H = 160;
   canvas.width  = W * 2;
   canvas.height = H * 2;
-  canvas.style.width  = W + 'px';
-  canvas.style.height = H + 'px';
 
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
   renderer.setSize(W * 2, H * 2, false);

@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   iniciarNavegacion();
   iniciarFormulario();
   iniciarPatoMenu();
+  engancharRankingVerMas();
   cargarRankingMenu();
   iniciarPreviewsEscenario();
 
@@ -62,6 +63,7 @@ async function cargarRankingMenu() {
     const scores = await obtenerPuntuaciones();
     if (scores.length === 0) {
       lista.innerHTML = '<li class="ranking-menu__cargando">Sin puntuaciones aún</li>';
+      actualizarBotonVerMas(0);
       return;
     }
     lista.innerHTML = scores
@@ -71,9 +73,30 @@ async function cargarRankingMenu() {
         <span class="ranking__pts">${s.puntos}</span>
       </li>`)
       .join('');
+    actualizarBotonVerMas(scores.length);
   } catch {
     lista.innerHTML = '<li class="ranking-menu__cargando">No disponible</li>';
+    actualizarBotonVerMas(0);
   }
+}
+
+function engancharRankingVerMas() {
+  const boton = document.getElementById('ranking-menu-ver-mas');
+  const lista = document.getElementById('ranking-menu-lista');
+  if (!boton || !lista) return;
+  boton.addEventListener('click', () => {
+    const expandida = lista.classList.toggle('ranking-menu__lista--expandida');
+    boton.textContent = expandida ? 'Ver menos' : 'Ver más';
+  });
+}
+
+function actualizarBotonVerMas(cantidad) {
+  const boton = document.getElementById('ranking-menu-ver-mas');
+  const lista = document.getElementById('ranking-menu-lista');
+  if (!boton || !lista) return;
+  lista.classList.remove('ranking-menu__lista--expandida');
+  boton.textContent = 'Ver más';
+  boton.classList.toggle('ranking-menu__ver-mas--visible', cantidad > 5);
 }
 
 function engancharMultijugador() {
