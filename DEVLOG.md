@@ -64,12 +64,34 @@ Commit: `6c8a399`
 
 ---
 
+---
+
+## 2026-11-22
+
+### Jugabilidad: condición de victoria y dificultad conectada
+
+**Victoria**
+- Nuevo overlay `#victoria` en `index.html` (dentro de `#vista-juego`, al mismo nivel que `#game-over`)
+- `mostrarVictoria()` en `escena.js`: pausa el cronómetro, guarda mejor score en localStorage, llama al callback `alGanar` para enviar puntuación al servidor y refrescar el ranking del menú
+- Victoria se activa al aterrizar en una celda cuya `alturaEfectiva >= NIVEL_MAXIMO_POR_ESCENARIO[escenario]`
+  - Pirámide: nivel 11 | Torre: nivel 14 | Islas: nivel 11
+- "Jugar de nuevo" reinicia con el mismo escenario/pato/dificultad; "Menú" vuelve al inicio
+- `actualizarHUD()` ahora también actualiza `#hud-nivel-total` con el máximo real del escenario actual
+
+**Dificultad conectada**
+- Tablas en `escena.js`: `PROB_MINAS` y `DENSIDAD_COLECCIONABLES`
+- `reiniciar()` acepta `dificultad` como 4to parámetro; se pasa desde `main.js` con `dificultadPendiente`
+- Minas dinámicas (`intentarSpawnMinas`): prob = base + nivel × porNivel (Fácil 2%+0.5, Normal 4%+1.2, Difícil 7%+2.0)
+- Minas estáticas iniciales en `piramide.js`: Fácil 1.5%, Normal 3%, Difícil 6%
+- Coleccionables: densidad Fácil 20%, Normal 12%, Difícil 7%
+- `main.js` ahora importa `enviarPuntuacion` y lo usa como callback `alGanar`
+
 ## Pendiente
 
 | Tarea | Prioridad |
 |---|---|
-| Condición de victoria (llegar al nivel 11) | Alta |
-| Conectar dificultad a lógica del juego | Alta |
+| ~~Condición de victoria (llegar al nivel 11)~~ | ~~Alta~~ ✓ |
+| ~~Conectar dificultad a lógica del juego~~ | ~~Alta~~ ✓ |
 | 3 objetos especiales / power-ups | Alta (rubro) |
 | Música de fondo | Media (rubro) |
 | Sonidos de juego (cuak, salto, recoger, mina) | Media |

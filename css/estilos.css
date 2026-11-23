@@ -282,22 +282,75 @@ h2 {
   margin-bottom: 8px;
 }
 
+.ranking-menu__tabla {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 14px;
+  overflow: hidden;
+  min-width: 240px;
+  color: #ffffff;
+  font-family: 'Fredoka', 'Trebuchet MS', sans-serif;
+}
+
+.ranking-menu__cabecera {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #ffffff;
+  opacity: 0.6;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+}
+
 .ranking-menu__lista {
   list-style: none;
   padding: 0;
   margin: 0;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
-  line-height: 1.9;
 }
 
 .ranking-menu__lista li {
-  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+
+.ranking-menu__lista li:first-child {
+  border-top: none;
+}
+
+.ranking__pos {
+  width: 24px;
+  opacity: 0.45;
+  flex-shrink: 0;
+  font-size: 12px;
+}
+
+.ranking__nombre {
+  flex: 1;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ranking__pts {
+  flex-shrink: 0;
+  text-align: right;
 }
 
 .ranking-menu__cargando {
   font-size: 12px;
   font-weight: 700;
+  padding: 8px 12px;
+  color: #ffffff;
+  opacity: 0.7;
 }
 
 /* ============================================================
@@ -624,6 +677,28 @@ h2 {
   text-shadow: 0 1px 3px rgba(0,0,0,0.3);
 }
 
+.saciedad__barra {
+  width: 100px;
+  height: 10px;
+  border-radius: 5px;
+  background: rgba(255,255,255,0.25);
+  border: 1.5px solid rgba(255,255,255,0.6);
+  overflow: hidden;
+  margin-top: 2px;
+}
+
+.saciedad__relleno {
+  height: 100%;
+  width: 0%;
+  background: var(--amarillo);
+  border-radius: 5px;
+  transition: width 0.3s ease, background 0.4s ease;
+}
+
+.saciedad__relleno--llena {
+  background: var(--menta);
+}
+
 .hud__nivel-texto {
   font-size: 28px;
   font-weight: 700;
@@ -653,6 +728,7 @@ h2 {
   line-height: 1;
   margin-bottom: 4px;
   letter-spacing: 2px;
+  transition: color 0.5s ease;
 }
 
 
@@ -823,6 +899,70 @@ h2 {
 .game-over__linea strong {
   color: var(--tinta);
   font-size: 22px;
+}
+
+/* ============================================================
+   VICTORIA OVERLAY
+   ============================================================ */
+#victoria {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(31, 36, 48, 0.75);
+  pointer-events: auto;
+}
+
+#victoria[hidden] {
+  display: none;
+}
+
+.victoria__tarjeta {
+  width: 100%;
+  max-width: 340px;
+  padding: 32px;
+  background: var(--papel);
+  border: 2.5px solid var(--tinta);
+  border-radius: 14px;
+  box-shadow: 4px 4px 0 var(--tinta);
+  text-align: center;
+}
+
+.victoria__icono {
+  font-size: 48px;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.victoria__titulo {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 14px;
+  color: var(--tinta);
+}
+
+.victoria__dato {
+  margin: 0 0 8px;
+  font-size: 18px;
+  color: var(--texto-suave);
+}
+
+.victoria__dato strong {
+  color: var(--tinta);
+  font-size: 22px;
+}
+
+.victoria__dato--mejor strong {
+  color: var(--amarillo);
+}
+
+.victoria__botones {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
 }
 
 /* ============================================================

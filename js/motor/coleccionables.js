@@ -62,8 +62,10 @@ function crearMesh(tipo) {
   }
 }
 
+const VIDA_ITEM = 25; // segundos antes de que un item desaparezca
+
 export function crearSistemaColeccionables(scene, alturaFn, rango) {
-  const activos = new Map(); // "ix,iz" → { grupo, tipo, baseY, t }
+  const activos = new Map(); // "ix,iz" → { grupo, tipo, baseY, t, vida }
 
   function spawn(ix, iz) {
     const key = `${ix},${iz}`;
@@ -76,18 +78,32 @@ export function crearSistemaColeccionables(scene, alturaFn, rango) {
     grupo.position.set(ix * 2, baseY, iz * 2);
     grupo.scale.setScalar(2.2);
     scene.add(grupo);
-    activos.set(key, { grupo, tipo, baseY, t: Math.random() * Math.PI * 2 });
+    activos.set(key, { grupo, tipo, baseY, t: Math.random() * Math.PI * 2, vida: VIDA_ITEM });
   }
 
-  function spawnEnNivel(nivelMin, nivelMax, densidad = 0.15) {
-    for (let ix = -rango; ix <= rango; ix++) {
-      for (let iz = -rango; iz <= rango; iz++) {
-        const h = alturaFn(ix, iz);
-        if (h >= nivelMin && h <= nivelMax && Math.random() < densidad) {
-          spawn(ix, iz);
-        }
-      }
-    }
+  function spawnAleatorio() {
+    const ix = Math.floor(Math.random() * (rango * 2 + 1)) - rango;
+    const iz = Math.floor(Math.random() * (rango * 2 + 1)) - rango;
+    spawn(ix, iz);
+  }
+
+  function spawnEnCuadrante(qx, qz) {
+    const ix = qx > 0
+      ? Math.floor(Math.random() * (rango + 1))
+      : -(Math.floor(Math.random() * rango) + 1);
+    const iz = qz > 0
+      ? Math.floor(Math.random() * (rango + 1))
+      : -(Math.floor(Math.random() * rango) + 1);
+    spawn(ix, iz);
+  }
+
+  function itemsEnCuadrante(qx, qz) {
+    let n = 0;
+    activos.forEach((_, key) => {
+      const [ix, iz] = key.split(',').map(Number);
+      if ((qx > 0 ? ix >= 0 : ix < 0) && (qz > 0 ? iz >= 0 : iz < 0)) n++;
+    });
+    return n;
   }
 
   function recoger(ix, iz) {
@@ -100,10 +116,17 @@ export function crearSistemaColeccionables(scene, alturaFn, rango) {
   }
 
   function animar(delta) {
-    activos.forEach((item) => {
+    const expirados = [];
+    activos.forEach((item, key) => {
       item.t += delta * 2.5;
       item.grupo.position.y = item.baseY + Math.sin(item.t) * 0.2;
       item.grupo.rotation.y += delta * 2;
+      item.vida -= delta;
+      if (item.vida <= 0) expirados.push(key);
+    });
+    expirados.forEach((key) => {
+      scene.remove(activos.get(key).grupo);
+      activos.delete(key);
     });
   }
 
@@ -112,5 +135,5 @@ export function crearSistemaColeccionables(scene, alturaFn, rango) {
     activos.clear();
   }
 
-  return { spawn, spawnEnNivel, recoger, animar, limpiar };
+  return { spawn, spawnAleatorio, spawnEnCuadrante, itemsEnCuadrante, recoger, animar, limpiar };
 }

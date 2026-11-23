@@ -3,10 +3,9 @@ import { crearEstructura } from './piramide.js';
 import { crearPato } from './pato.js';
 import { crearExplosion } from './explosion.js';
 import { crearSistemaColeccionables } from './coleccionables.js';
-import { crearNubes } from './nubes.js';
 
 const INICIO_POR_ESCENARIO = {
-  piramide: { x: 0, z: 5 },
+  piramide: { x: 0, z: 10 },
   torre:    { x: 5, z: 0 },
   islas:    { x: -10, z: 4 },
 };
@@ -23,9 +22,17 @@ const RANGO_POR_ESCENARIO = {
   islas: 14,
 };
 
+const NIVEL_MAXIMO_POR_ESCENARIO = { piramide: 11, torre: 14, islas: 11 };
+
+const INTERVALO_MINAS  = { facil: 2.0, normal: 1.2, dificil: 0.6 };
+const CAP_MINAS_PCT    = { facil: 0.25, normal: 0.45, dificil: 0.65 };
+const INTERVALO_ITEMS          = 1.5;
+const MIN_ITEMS_POR_CUADRANTE  = 5;
+const CUADRANTES = [[1,1],[-1,1],[-1,-1],[1,-1]];
+
 function lerp(a, b, t) { return a + (b - a) * t; }
 
-export async function iniciarEscena({ alMoverJugador } = {}) {
+export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
   const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
@@ -76,6 +83,15 @@ export async function iniciarEscena({ alMoverJugador } = {}) {
   let muerto = false;
   let patoColor = 0xffd45e;
   let patoOjoColor = 0x1a1a2e;
+  let dificultadActual = 'normal';
+
+  /* ---------- Saciedad ---------- */
+  const SACIEDAD_MAX = 30;
+  let saciedad      = 0;
+  let satisfecho    = false;
+  let nubeCima      = null;
+  let nubeCimaBaseY = 0;
+  let nubeCimaT     = 0;
 
   /* ---------- Jugador (grupo) ---------- */
   const jugador = new THREE.Group();
@@ -113,11 +129,12 @@ export async function iniciarEscena({ alMoverJugador } = {}) {
 
   /* ---------- Coleccionables ---------- */
   let coleccionables = crearSistemaColeccionables(scene, alturaFn, RANGO_POR_ESCENARIO[escenarioActual]);
-  let sistemaDeNubes = crearNubes(scene, 'piramide');
-  coleccionables.spawnEnNivel(1, estructura.nivelMaxVisible, 0.12);
 
-  /* ---------- Celdas visitadas (para minas generativas) ---------- */
-  const visitadas = new Set();
+  /* ---------- Ticks de minas e items ---------- */
+  let minaTick = 0;
+  let itemTick  = 0;
+
+  /* nubeCima se crea después de que las funciones auxiliares estén definidas */
 
   /* ---------- Métricas de rendimiento ---------- */
   const divStats = document.createElement('div');
@@ -166,8 +183,11 @@ export async function iniciarEscena({ alMoverJugador } = {}) {
   const elNivelActual = document.getElementById('hud-nivel-actual');
 
   function actualizarHUD() {
-    const nivelActual = Math.min(11, alturaEfectiva(celdaX, celdaZ));
+    const nivelMax = NIVEL_MAXIMO_POR_ESCENARIO[escenarioActual] ?? 11;
+    const nivelActual = Math.min(nivelMax, alturaEfectiva(celdaX, celdaZ));
     if (elNivelActual) elNivelActual.textContent = nivelActual;
+    const elTotal = document.getElementById('hud-nivel-total');
+    if (elTotal) elTotal.textContent = nivelMax;
   }
 
   /* ---------- HUD vidas ---------- */
@@ -181,6 +201,44 @@ export async function iniciarEscena({ alMoverJugador } = {}) {
   function actualizarScore() {
     const el = document.getElementById('hud-score');
     if (el) el.textContent = score;
+  }
+
+  /* ---------- Nube de la cima ---------- */
+  function crearNubeCima() {
+    const mat = new THREE.MeshPhongMaterial({ color: 0xffffff, flatShading: true });
+    const g = new THREE.Group();
+    [
+      [0,    0,   0, 2.2, 1.0, 1.4],
+      [-1.1, 0.3, 0, 1.4, 0.8, 1.0],
+      [ 1.1, 0.3, 0, 1.4, 0.8, 1.0],
+    ].forEach(([x, y, z, w, h, d]) => {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+      m.position.set(x, y, z);
+      g.add(m);
+    });
+    nubeCimaBaseY = alturaFn(0, 0) * 2 - 1 + elevacion * 2 + 4;
+    g.position.set(0, nubeCimaBaseY, 0);
+    g.visible = false;
+    scene.add(g);
+    return g;
+  }
+
+  /* ---------- Saciedad ---------- */
+  function actualizarBarraSaciedad() {
+    const el = document.getElementById('hud-saciedad-relleno');
+    if (el) el.style.width = `${(saciedad / SACIEDAD_MAX) * 100}%`;
+  }
+
+  function actualizarSaciedad(pts) {
+    if (satisfecho) return;
+    saciedad = Math.min(SACIEDAD_MAX, saciedad + pts);
+    actualizarBarraSaciedad();
+    if (saciedad >= SACIEDAD_MAX) {
+      satisfecho = true;
+      if (nubeCima) nubeCima.visible = true;
+      const el = document.getElementById('hud-saciedad-relleno');
+      if (el) el.classList.add('saciedad__relleno--llena');
+    }
   }
 
   /* ---------- Game Over ---------- */
@@ -197,6 +255,30 @@ export async function iniciarEscena({ alMoverJugador } = {}) {
     if (elMejor) elMejor.textContent = Math.max(score, mejor);
 
     overlay.classList.remove('oculto');
+  }
+
+  /* ---------- Victoria ---------- */
+  function mostrarVictoria() {
+    cronometroActivo = false;
+
+    const overlay = document.getElementById('victoria');
+    if (!overlay) return;
+
+    const keyMejor = `mejor_${escenarioActual}`;
+    const mejor = parseInt(localStorage.getItem(keyMejor) || '0', 10);
+    if (score > mejor) localStorage.setItem(keyMejor, score);
+
+    const scoreEl = document.getElementById('victoria-score');
+    const tiempoEl = document.getElementById('victoria-tiempo');
+    const mejorEl  = document.getElementById('victoria-mejor');
+    if (scoreEl)  scoreEl.textContent  = score;
+    if (tiempoEl) tiempoEl.textContent = formatearTiempo(cronometroT);
+    if (mejorEl)  mejorEl.textContent  = Math.max(score, mejor);
+
+    overlay.hidden = false;
+
+    const nombre = document.getElementById('nombre-jugador')?.value.trim() || 'Pato';
+    if (typeof alGanar === 'function') alGanar({ score, tiempo: cronometroT, nombre });
   }
 
   /* ---------- Respawn ---------- */
@@ -218,26 +300,76 @@ export async function iniciarEscena({ alMoverJugador } = {}) {
     bob.visible = true;
   }
 
-  /* ---------- Generación dinámica de minas ---------- */
-  function intentarSpawnMinas(x, z) {
-    const key = `${x},${z}`;
-    if (visitadas.has(key)) return;
-    visitadas.add(key);
+  /* ---------- Color del cronómetro según densidad de minas ---------- */
+  function actualizarCronometroColor() {
+    if (!elTiempo) return;
+    const cap = Math.max(1, Math.floor(estructura.tapasCount * (CAP_MINAS_PCT[dificultadActual] ?? 0.45)));
+    const pct = Math.min(1, estructura.minasCount / cap);
+    // Blanco → amarillo → naranja → rojo
+    let r, g, b;
+    if (pct < 0.33) {
+      const t = pct / 0.33;
+      r = 255; g = Math.round(lerp(255, 200, t)); b = Math.round(lerp(255, 0, t));
+    } else if (pct < 0.66) {
+      const t = (pct - 0.33) / 0.33;
+      r = 255; g = Math.round(lerp(200, 100, t)); b = 0;
+    } else {
+      const t = (pct - 0.66) / 0.34;
+      r = 255; g = Math.round(lerp(100, 30, t)); b = 0;
+    }
+    elTiempo.style.color = `rgb(${r},${g},${b})`;
+  }
 
-    const nivel = alturaFn(x, z);
-    if (nivel < 3) return;
+  /* ---------- Spawn periódico de minas ---------- */
+  function tickMinas(delta) {
+    minaTick += delta;
+    // Intervalo se reduce conforme pasa el tiempo: se divide a la mitad cada 90 s
+    const base = INTERVALO_MINAS[dificultadActual] ?? 1.2;
+    const intervaloEfectivo = Math.max(0.3, base / (1 + cronometroT / 90));
+    if (minaTick < intervaloEfectivo) return;
+    minaTick = 0;
 
-    const prob = 0.04 + nivel * 0.012;
-    const vecinos = [
-      [x + 1, z], [x - 1, z], [x, z + 1], [x, z - 1],
-      [x + 1, z + 1], [x - 1, z - 1], [x + 1, z - 1], [x - 1, z + 1],
-    ];
-    vecinos.forEach(([nx, nz]) => {
-      const nk = `${nx},${nz}`;
-      if (!visitadas.has(nk) && alturaFn(nx, nz) > 1 && Math.random() < prob) {
-        estructura.convertirEnMina(nx, nz);
+    // No superar el cap de minas por dificultad
+    const cap = Math.floor(estructura.tapasCount * (CAP_MINAS_PCT[dificultadActual] ?? 0.45));
+    if (estructura.minasCount >= cap) return;
+
+    const nivelMax = NIVEL_MAXIMO_POR_ESCENARIO[escenarioActual];
+    const rango    = RANGO_POR_ESCENARIO[escenarioActual];
+    // A partir del minuto 1 se añade 1 mina extra por minuto transcurrido
+    const cantidad = 1 + Math.floor(cronometroT / 60);
+
+    for (let spawn = 0; spawn < cantidad; spawn++) {
+      if (estructura.minasCount >= cap) break; // verificar cap en cada iteración
+      for (let i = 0; i < 8; i++) {
+        const ix = Math.floor(Math.random() * (rango * 2 + 1)) - rango;
+        const iz = Math.floor(Math.random() * (rango * 2 + 1)) - rango;
+        const nivel = alturaFn(ix, iz);
+        if (nivel <= 0 || nivel >= nivelMax) continue;
+        if (Math.random() < nivel / nivelMax) {
+          estructura.convertirEnMina(ix, iz);
+          break;
+        }
       }
-    });
+    }
+  }
+
+  /* ---------- Spawn periódico de items ---------- */
+  function preSpawnItems() {
+    for (const [qx, qz] of CUADRANTES) {
+      for (let i = 0; i < MIN_ITEMS_POR_CUADRANTE; i++) {
+        coleccionables.spawnEnCuadrante(qx, qz);
+      }
+    }
+  }
+
+  function tickItems(delta) {
+    itemTick += delta;
+    if (itemTick < INTERVALO_ITEMS) return;
+    itemTick = 0;
+    for (const [qx, qz] of CUADRANTES) {
+      const faltantes = MIN_ITEMS_POR_CUADRANTE - coleccionables.itemsEnCuadrante(qx, qz);
+      for (let i = 0; i < faltantes; i++) coleccionables.spawnEnCuadrante(qx, qz);
+    }
   }
 
   /* ---------- Colisión con mina y expansión de pirámide ---------- */
@@ -248,15 +380,26 @@ export async function iniciarEscena({ alMoverJugador } = {}) {
       const mult = racha >= 3 ? 2 : 1;
       score += pts * mult;
       actualizarScore();
+      actualizarSaciedad(pts);
     } else {
       racha = 0;
     }
 
     if (estructura.esMina(x, z)) {
+      estructura.eliminarCubo(x, z);
       vidas--;
       actualizarVidas();
       muerto = true;
       bob.visible = false;
+
+      saciedad = Math.floor(saciedad / 2);
+      if (satisfecho) {
+        satisfecho = false;
+        if (nubeCima) nubeCima.visible = false;
+        const elBar = document.getElementById('hud-saciedad-relleno');
+        if (elBar) elBar.classList.remove('saciedad__relleno--llena');
+      }
+      actualizarBarraSaciedad();
 
       explosionActual = crearExplosion(scene, jugador.position.clone());
 
@@ -268,18 +411,12 @@ export async function iniciarEscena({ alMoverJugador } = {}) {
       return;
     }
 
-    intentarSpawnMinas(x, z);
-
-    /* Revelar siguiente nivel de la pirámide al llegar a la cima visible */
-    if (escenarioActual === 'piramide' && estructura.nivelMaxVisible < 11) {
-      if (alturaFn(x, z) >= estructura.nivelMaxVisible) {
-        const nextNivel = estructura.nivelMaxVisible + 1;
-        estructura.revelarNivel(nextNivel);
-        coleccionables.spawnEnNivel(nextNivel, nextNivel, 0.12);
-      }
-    }
-
     actualizarHUD();
+
+    /* Victoria: pato llegó al nivel máximo Y está satisfecho */
+    if (alturaEfectiva(x, z) >= NIVEL_MAXIMO_POR_ESCENARIO[escenarioActual] && satisfecho) {
+      mostrarVictoria();
+    }
   }
 
   /* ---------- Control por teclado ---------- */
@@ -343,14 +480,26 @@ export async function iniciarEscena({ alMoverJugador } = {}) {
     if (!cronometroActivo) cronometroActivo = true;
   });
 
-  /* ---------- Reintentar (game over) ---------- */
+  /* ---------- Reintentar (game over) y botones de victoria ---------- */
   document.addEventListener('click', (e) => {
     if (e.target.closest('#boton-reintentar')) {
       const overlay = document.getElementById('game-over');
       if (overlay) overlay.classList.add('oculto');
-      reiniciar(escenarioActual, patoColor);
+      reiniciar(escenarioActual, patoColor, patoOjoColor, dificultadActual);
+    }
+    if (e.target.closest('#btn-victoria-nuevo')) {
+      const overlay = document.getElementById('victoria');
+      if (overlay) overlay.hidden = true;
+      reiniciar(escenarioActual, patoColor, patoOjoColor, dificultadActual);
+    }
+    if (e.target.closest('#btn-victoria-menu')) {
+      const overlay = document.getElementById('victoria');
+      if (overlay) overlay.hidden = true;
     }
   });
+
+  nubeCima = crearNubeCima();
+  preSpawnItems();
 
   renderer.setAnimationLoop(animate);
 
@@ -421,9 +570,20 @@ export async function iniciarEscena({ alMoverJugador } = {}) {
       if (elTiempo) elTiempo.textContent = formatearTiempo(cronometroT);
     }
 
+    if (cronometroActivo) {
+      tickMinas(delta);
+      tickItems(delta);
+      actualizarCronometroColor();
+    }
     coleccionables.animar(delta);
     estructura.animarMinas(delta);
-    sistemaDeNubes.animar(delta);
+
+    if (nubeCima && nubeCima.visible) {
+      nubeCimaT += delta;
+      nubeCima.position.y = nubeCimaBaseY + Math.sin(nubeCimaT * 1.2) * 0.4;
+      nubeCima.rotation.y += delta * 0.3;
+    }
+
     renderer.render(scene, camera);
     actualizarStats(delta);
   }
@@ -459,28 +619,28 @@ export async function iniciarEscena({ alMoverJugador } = {}) {
   }
 
   /* ---------- Control de escenario ---------- */
-  function reiniciar(tipo = 'piramide', colorHex = patoColor, colorOjo = patoOjoColor) {
+  function reiniciar(tipo = 'piramide', colorHex = patoColor, colorOjo = patoOjoColor, dificultad = dificultadActual) {
     estructura.limpiar();
     coleccionables.limpiar();
-    visitadas.clear();
     if (explosionActual) { explosionActual = null; }
 
-    escenarioActual = tipo;
-    patoColor    = colorHex;
-    patoOjoColor = colorOjo;
+    escenarioActual  = tipo;
+    patoColor        = colorHex;
+    patoOjoColor     = colorOjo;
+    dificultadActual = dificultad || 'normal';
 
-    estructura = crearEstructura(scene, tipo);
+    estructura = crearEstructura(scene, tipo, dificultadActual);
     alturaFn = estructura.alturaFn;
     elevacion = estructura.elevacion || 0;
-    sistemaDeNubes.limpiar();
-    sistemaDeNubes = crearNubes(scene, tipo);
 
     coleccionables = crearSistemaColeccionables(scene, alturaFn, RANGO_POR_ESCENARIO[tipo] || 5);
-    if (tipo === 'piramide') {
-      coleccionables.spawnEnNivel(1, estructura.nivelMaxVisible, 0.12);
-    } else {
-      coleccionables.spawnEnNivel(2, 11, 0.12);
-    }
+    minaTick = 0;
+    itemTick  = 0;
+
+    saciedad   = 0;
+    satisfecho = false;
+    nubeCimaT  = 0;
+    if (nubeCima) { scene.remove(nubeCima); nubeCima = null; }
 
     const inicio = INICIO_POR_ESCENARIO[tipo] || { x: 0, z: 9 };
     celdaX = inicio.x;
@@ -494,7 +654,7 @@ export async function iniciarEscena({ alMoverJugador } = {}) {
     cronometroT = 0;
     cronometroActivo = false;
 
-    if (elTiempo) elTiempo.textContent = '00:00';
+    if (elTiempo) { elTiempo.textContent = '00:00'; elTiempo.style.color = ''; }
 
     bob.remove(pato);
     pato = crearPato(patoColor, patoOjoColor);
@@ -515,12 +675,20 @@ export async function iniciarEscena({ alMoverJugador } = {}) {
 
     document.body.style.background = FONDO_POR_ESCENARIO[tipo] || FONDO_POR_ESCENARIO.piramide;
 
-    const overlay = document.getElementById('game-over');
-    if (overlay) overlay.classList.add('oculto');
+    const overlayGO = document.getElementById('game-over');
+    if (overlayGO) overlayGO.classList.add('oculto');
+    const overlayV = document.getElementById('victoria');
+    if (overlayV) overlayV.hidden = true;
 
     actualizarHUD();
     actualizarVidas();
     actualizarScore();
+
+    nubeCima = crearNubeCima();
+    preSpawnItems();
+    actualizarBarraSaciedad();
+    const elBar = document.getElementById('hud-saciedad-relleno');
+    if (elBar) elBar.classList.remove('saciedad__relleno--llena');
   }
 
   function pausarCronometro()   { cronometroActivo = false; }

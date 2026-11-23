@@ -115,14 +115,15 @@ export function obtenerAlturaFn(tipo) {
 const NIVEL_INICIAL_PIRAMIDE = 4;
 const MAX_DYN_MINAS = 60;
 const ELEV_POR_TIPO = { piramide: 0, torre: 0, islas: 3 };
+const PROB_MINAS_ESTATICA = { facil: 0.05, normal: 0.10, dificil: 0.18 };
 
-export function crearEstructura(escena, tipo = 'piramide') {
+export function crearEstructura(escena, tipo = 'piramide', dificultad = 'normal') {
   _setMineTopColor(_C_MINA_A);
 
   const alturaFn = obtenerAlturaFn(tipo);
   const RANGO = tipo === 'islas' ? 16 : tipo === 'piramide' ? 10 : 5;
   const ELEVACION = ELEV_POR_TIPO[tipo] || 0;
-  let _nivelMaxVisible = tipo === 'piramide' ? NIVEL_INICIAL_PIRAMIDE : 100;
+  let _nivelMaxVisible = 100;
 
   /* -- Single pass: collect data and count -- */
   const cubeData = [];
@@ -136,7 +137,7 @@ export function crearEstructura(escena, tipo = 'piramide') {
       for (let h = 0; h < hMax; h++) {
         const nivel  = h + 1;
         const esTapa = h === hMax - 1;
-        const esMina = esTapa && hMax > 1 && Math.random() < 0.03;
+        const esMina = esTapa && hMax > 1 && Math.random() < (PROB_MINAS_ESTATICA[dificultad] ?? 0.03);
         if (esMina) nMinas++; else nSeguro++;
         cubeData.push({
           key, nivel, esTapa, esMina,
@@ -315,6 +316,26 @@ export function crearEstructura(escena, tipo = 'piramide') {
     // The outline at tapa.outlineIdx stays visible at the correct position
   }
 
+  function eliminarCubo(ix, iz) {
+    const key = `${ix},${iz}`;
+    const tapa = cubosTapa.get(key);
+    if (!tapa) return;
+
+    if (tapa.isMina) {
+      instMinas.setMatrixAt(tapa.instIdx, _HIDDEN);
+      instMinas.instanceMatrix.needsUpdate = true;
+      minasPos.delete(key);
+      const ai = minasActiveIdx.indexOf(tapa.instIdx);
+      if (ai !== -1) minasActiveIdx.splice(ai, 1);
+    } else {
+      instSeguro.setMatrixAt(tapa.instIdx, _HIDDEN);
+      instSeguro.instanceMatrix.needsUpdate = true;
+    }
+    instOutline.setMatrixAt(tapa.outlineIdx, _HIDDEN);
+    instOutline.instanceMatrix.needsUpdate = true;
+    cubosTapa.delete(key);
+  }
+
   function limpiar() {
     escena.remove(instSeguro);
     escena.remove(instMinas);
@@ -334,9 +355,12 @@ export function crearEstructura(escena, tipo = 'piramide') {
     animarMinas,
     esMina,
     convertirEnMina,
+    eliminarCubo,
     limpiar,
     revelarNivel,
     elevacion: ELEVACION,
     get nivelMaxVisible() { return _nivelMaxVisible; },
+    get minasCount()      { return minasPos.size; },
+    get tapasCount()      { return cubosTapa.size; },
   };
 }

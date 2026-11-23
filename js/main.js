@@ -4,7 +4,7 @@ import { iniciarFormulario } from './red/formulario.js';
 import { iniciarMultijugador, conectarJugador, enviarPosicion, emitirEscenario } from './red/multijugador.js';
 import { iniciarSelectorPatos } from './motor/selector-patos.js';
 import { iniciarPatoMenu } from './motor/pato-menu.js';
-import { cargarPuntuaciones } from './red/puntuaciones.js';
+import { cargarPuntuaciones, enviarPuntuacion } from './red/puntuaciones.js';
 import { iniciarPreviewsEscenario } from './motor/previews-escenario.js';
 
 let escenarioPendiente = 'piramide';
@@ -18,7 +18,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   cargarRankingMenu();
   iniciarPreviewsEscenario();
 
-  const escena        = await iniciarEscena({ alMoverJugador: enviarPosicion });
+  const escena        = await iniciarEscena({
+    alMoverJugador: enviarPosicion,
+    alGanar: async ({ nombre, score }) => {
+      try { await enviarPuntuacion(nombre, score); } catch {}
+      cargarRankingMenu();
+    },
+  });
   const selectorPatos = iniciarSelectorPatos();
 
   iniciarMultijugador({
@@ -46,7 +52,11 @@ async function cargarRankingMenu() {
       return;
     }
     lista.innerHTML = scores
-      .map((s, i) => `<li>${String(i + 1).padStart(2, '0')}. ${s.nombre.padEnd(12, ' ')} ${String(s.puntos).padStart(6, ' ')} pts</li>`)
+      .map((s, i) => `<li>
+        <span class="ranking__pos">${String(i + 1).padStart(2, '0')}.</span>
+        <span class="ranking__nombre">${s.nombre}</span>
+        <span class="ranking__pts">${s.puntos}</span>
+      </li>`)
       .join('');
   } catch {
     lista.innerHTML = '<li class="ranking-menu__cargando">No disponible</li>';
@@ -127,7 +137,7 @@ function engancharColores(escena, selectorPatos) {
     }
 
     const cfg = selectorPatos.getPatolSeleccionado();
-    escena.reiniciar(escenarioPendiente, cfg.colorCuerpo, cfg.colorOjo);
+    escena.reiniciar(escenarioPendiente, cfg.colorCuerpo, cfg.colorOjo, dificultadPendiente ?? 'normal');
     emitirEscenario(escenarioPendiente, modoPendiente);
     mostrarVista('vista-juego');
   });

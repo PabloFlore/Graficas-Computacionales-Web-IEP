@@ -61,9 +61,16 @@
 
     <div class="ranking-menu">
       <p class="ranking-menu__titulo">— TOP 10 —</p>
-      <ol class="ranking-menu__lista" id="ranking-menu-lista">
-        <li class="ranking-menu__cargando">Cargando...</li>
-      </ol>
+      <div class="ranking-menu__tabla">
+        <div class="ranking-menu__cabecera">
+          <span class="ranking__pos">#</span>
+          <span class="ranking__nombre">Jugador</span>
+          <span class="ranking__pts">Pts</span>
+        </div>
+        <ol class="ranking-menu__lista" id="ranking-menu-lista">
+          <li class="ranking-menu__cargando">Cargando...</li>
+        </ol>
+      </div>
     </div>
     <span class="marca__logo marca__logo--pie">UANL &nbsp;!&nbsp; LMAD &nbsp;!&nbsp; GRAFICAS COMPUTACIONALES EN WEB</span>
   </section>
@@ -210,6 +217,13 @@
             <span class="hud__etiqueta">Score</span>
             <span class="hud__valor" id="hud-score">0</span>
           </div>
+
+          <div class="hud__flotante">
+            <span class="hud__etiqueta">Hambre</span>
+            <div class="saciedad__barra">
+              <div class="saciedad__relleno" id="hud-saciedad-relleno"></div>
+            </div>
+          </div>
         </div>
 
         <div class="hud__panel cronometro">
@@ -235,6 +249,20 @@
         <p class="game-over__linea">Mejor: <strong id="go-mejor">0</strong></p>
         <button class="boton boton--primario" id="boton-reintentar">Reintentar</button>
         <button class="boton boton--fantasma" data-vista="vista-menu">Menú</button>
+      </div>
+    </div>
+    <!-- Victoria overlay -->
+    <div id="victoria" hidden>
+      <div class="victoria__tarjeta">
+        <div class="victoria__icono">&#9733;</div>
+        <h2 class="victoria__titulo">¡Llegaste a la cima!</h2>
+        <p class="victoria__dato">Score <strong id="victoria-score">0</strong></p>
+        <p class="victoria__dato">Tiempo <strong id="victoria-tiempo">00:00</strong></p>
+        <p class="victoria__dato victoria__dato--mejor">Mejor <strong id="victoria-mejor">0</strong></p>
+        <div class="victoria__botones">
+          <button class="boton boton--primario" id="btn-victoria-nuevo">Jugar de nuevo</button>
+          <button class="boton boton--fantasma" id="btn-victoria-menu" data-vista="vista-menu">Menú</button>
+        </div>
       </div>
     </div>
   </section>
