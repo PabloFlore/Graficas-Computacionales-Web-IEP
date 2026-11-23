@@ -10,6 +10,8 @@ import { iniciarPreviewsEscenario } from './motor/previews-escenario.js';
 let escenarioPendiente = 'piramide';
 let modoPendiente = 'carrera';
 let dificultadPendiente = 'normal';
+let jugadorRegistrado = false;
+let ignorarEscenarioPropio = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
   iniciarNavegacion();
@@ -28,13 +30,25 @@ document.addEventListener('DOMContentLoaded', async () => {
   const selectorPatos = iniciarSelectorPatos();
 
   iniciarMultijugador({
-    alEntrar: (jugador) => escena.agregarJugadorRemoto(jugador),
-    alMover:  (jugador) => escena.moverJugadorRemoto(jugador),
-    alSalir:  (id)      => escena.quitarJugadorRemoto(id),
-    alCambiarEscenario: ({ escenario }) => escena.reiniciar(escenario),
+    alEntrar: (jugador) => {
+      escena.agregarJugadorRemoto(jugador);
+      agregarJugadorSala(jugador);
+    },
+    alMover: (jugador) => escena.moverJugadorRemoto(jugador),
+    alSalir: (id) => {
+      escena.quitarJugadorRemoto(id);
+      quitarJugadorSala(id);
+    },
+    alCambiarEscenario: ({ escenario }) => {
+      if (ignorarEscenarioPropio) {
+        ignorarEscenarioPropio = false;
+        return;
+      }
+      escena.reiniciar(escenario);
+    },
   });
 
-  engancharConexion();
+  engancharMultijugador();
   engancharSeleccion(escena);
   engancharColores(escena, selectorPatos);
   engancharPausa(escena);
@@ -62,15 +76,50 @@ async function cargarRankingMenu() {
   }
 }
 
-function engancharConexion() {
-  const boton = document.getElementById('boton-conectar');
-  const campo = document.getElementById('nombre-jugador');
-  if (!boton || !campo) return;
+function engancharMultijugador() {
+  document.getElementById('boton-crear-sala')?.addEventListener('click', () => registrarEnSala('nombre-multi'));
+  document.getElementById('boton-unirse')?.addEventListener('click', () => registrarEnSala('nombre-unirse'));
 
-  boton.addEventListener('click', () => {
-    const nombre = campo.value.trim();
-    if (nombre) conectarJugador(nombre);
+  document.getElementById('boton-iniciar-multi')?.addEventListener('click', () => {
+    emitirEscenario(escenarioPendiente, modoPendiente);
+    mostrarVista('vista-juego');
   });
+}
+
+function registrarEnSala(idCampo) {
+  const campo = document.getElementById(idCampo);
+  const nombre = campo?.value.trim();
+  if (!nombre) {
+    campo?.classList.add('campo--error');
+    campo?.focus();
+    campo?.addEventListener('input', () => campo.classList.remove('campo--error'), { once: true });
+    return;
+  }
+
+  if (!jugadorRegistrado) {
+    ignorarEscenarioPropio = true;
+    setTimeout(() => { ignorarEscenarioPropio = false; }, 3000);
+    conectarJugador(nombre);
+    jugadorRegistrado = true;
+  }
+
+  const anfitrion = document.querySelector('#sala-jugadores-lista .sala-jugador--anfitrion');
+  if (anfitrion) anfitrion.textContent = `Tú (${nombre})`;
+  mostrarVista('vista-sala-espera');
+}
+
+function agregarJugadorSala(jugador) {
+  const lista = document.getElementById('sala-jugadores-lista');
+  if (!lista || lista.querySelector(`[data-id="${jugador.id}"]`)) return;
+  const li = document.createElement('li');
+  li.className = 'sala-jugador';
+  li.dataset.id = jugador.id;
+  li.textContent = jugador.nombre;
+  lista.appendChild(li);
+}
+
+function quitarJugadorSala(id) {
+  document.querySelector(`#sala-jugadores-lista [data-id="${id}"]`)?.remove();
 }
 
 function engancharSeleccion(escena) {
