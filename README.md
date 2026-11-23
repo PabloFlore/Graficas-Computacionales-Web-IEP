@@ -94,10 +94,16 @@ PORT=8080 npm start
 │   ├── config/
 │   │   └── preferencias.js Guardado en LocalStorage
 │   ├── motor/
-│   │   └── escena.js       Escena 3D (Three.js)
+│   │   ├── escena.js          Escena 3D, bucle de juego y HUD
+│   │   ├── piramide.js        Cubos de pirámide/torre/islas, minas y agua
+│   │   ├── coleccionables.js  Objetos y racha de puntos
+│   │   ├── pato.js            Modelo del pato
+│   │   ├── selector-patos.js  Selección de pato
+│   │   └── explosion.js       Efecto al perder una vida
 │   ├── red/
-│   │   ├── formulario.js   Envío de score
-│   │   └── puntuaciones.js Lectura y envío contra el WebService
+│   │   ├── formulario.js      Envío de score
+│   │   ├── puntuaciones.js    Lectura y envío contra el WebService
+│   │   └── multijugador.js    Socket.IO (sala, movimiento y escenario)
 │   └── util/
 │       └── navegacion.js   Transición entre vistas
 └── assets/                 Modelos, texturas y audio (vacíos por ahora)
@@ -148,28 +154,35 @@ puerto o tiene contraseña.
 
 | Vista | Estado |
 |---|---|
-| Menú inicial | Lista. Jugar, Configuraciones, Puntuaciones |
-| Configuraciones | Lista. Volumen, sonido y dificultad (persisten en LocalStorage) |
-| Puntuaciones | Lista. Formulario para guardar score + tabla desde MySQL |
+| Menú inicial | Listo. Solitario/Multijugador, ranking TOP 10 y login de Facebook |
+| Configuraciones | Listo. Volumen y sonido (persisten en LocalStorage) |
+| Puntuaciones | Listo. Formulario para guardar score + tabla desde MySQL |
 | Pausa | Lista. Reanudar y salir |
-| HUD de juego | Maquetado. Barras de vida y velocidad, marcador de esquivadas |
+| HUD de juego | Listo. Nivel, score, vidas, cronómetro y barra de Agua en La Pirámide |
 
 ---
 
-## 6. Motor 3D
+## 6. Motor 3D y jugabilidad
 
-`js/motor/escena.js` arma la escena con Three.js (WebGL) y cuatro luces:
+`js/motor/escena.js` arma la escena con Three.js y gestiona el bucle de juego, el pato,
+la cámara, el HUD, los coleccionables y la comunicación con Socket.IO. Los escenarios se
+construyen en `js/motor/piramide.js` con instancias de cubos; los objetos están en
+`js/motor/coleccionables.js` y los efectos en `js/motor/explosion.js` y `nubes.js`.
 
-- **Ambiental** — `0xffffff`, intensidad `0.3`
-- **Direccional** — `0xffffff`, intensidad `1.5`, frontal
-- **Puntual** — `0xff8c00`, intensidad `2`, sigue el eje X de la esfera
+### Escenarios
 
-Las geometrías usan `MeshPhongMaterial` para reaccionar a esas luces. La esfera se mueve
-de forma gradual y lenta entre X = -10 y X = 10, volviendo a su posición inicial, y la
-luz puntual comparte su posición.
+- **La Pirámide** — 11 niveles, salida en `(0,10)` y victoria al llegar al centro. Un
+  lago azul sólido sube 1 nivel cada 9s en Carrera y cada 6s en Rey; recoger hojas lo
+  baja 1 nivel. Si el agua alcanza al pato se pierde una vida y el agua retrocede 3
+  niveles. La cámara es frontal fija: no se puede volver a la mitad trasera (`z < 0`)
+  ni alejarse hacia las orillas. Alrededor del 22% de los cubos seguros pisados se
+  desprenden poco después; las minas dinámicas avisan naranja → rojo antes de activarse.
+- **Torre e Islas** — conservan la cámara orbital, la saciedad/nube como condición de
+  victoria y las minas dinámicas sin aviso.
 
-El render solo corre cuando la vista de juego está activa, así que en el menú y durante
-la pausa el bucle se detiene.
+La dificultad (`facil`, `normal`, `dificil`) ajusta la cantidad de minas y objetos. El
+modo `carrera` desactiva las minas dinámicas en La Pirámide para centrar el reto en el
+agua; `rey` las mantiene.
 
 ---
 
@@ -177,23 +190,17 @@ la pausa el bucle se detiene.
 
 Funciona:
 
-- Transición entre las cinco vistas
-- Preferencias persistentes en LocalStorage
-- WebService PHP/MySQL: guardar y leer puntuaciones
-- Inicio de sesión con Facebook (SDK JS) mostrando nombre y foto del perfil
-- Escena 3D iluminada con materiales Phong y movimiento animado
+- Tres escenarios con vidas, score, racha, cronómetro, HUD y pantallas de victoria/derrota
+- WebService PHP/MySQL: guardar y leer puntuaciones, con ranking en el menú
+- Login de Facebook (nombre y foto) y multijugador global simple con Socket.IO
+- Menú responsive con ranking móvil de 5 filas y botón "Ver más"
+- La Pirámide: agua que sube, aviso de minas, cubos que caen y cámara/movimiento restringido
 
 Pendiente:
 
-- **Control del jugador.** No hay teclado ni ratón: la esfera se mueve sola.
-- **Lógica de juego.** No hay colisiones, puntuación real, vidas ni fin de partida. Las
-  barras del HUD y el marcador son valores fijos.
-- **Sonido.** Las preferencias de volumen y sonido se guardan, pero no hay audio que
-  reproducir ni archivos en `assets/audio`.
-- **Dificultad.** Se selecciona y se guarda, pero nada la lee todavía.
-- **Vincular Facebook con el score.** El login no rellena todavía el formulario de
-  puntuaciones ni guarda progreso por usuario.
-- **Socket.IO.** Está en `package.json` pero no se usa en el servidor ni en el cliente.
+- **Sonido.** Las preferencias de volumen y sonido se guardan, pero no hay audio.
+- **Control táctil.** El juego se maneja solo con teclado.
+- **Vincular Facebook con el score.** El login no rellena el formulario ni guarda progreso por usuario.
 
 ---
 

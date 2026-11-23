@@ -40,12 +40,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       escena.quitarJugadorRemoto(id);
       quitarJugadorSala(id);
     },
-    alCambiarEscenario: ({ escenario }) => {
+    alCambiarEscenario: (data) => {
       if (ignorarEscenarioPropio) {
         ignorarEscenarioPropio = false;
         return;
       }
-      escena.reiniciar(escenario);
+      const info = typeof data === 'string' ? { escenario: data } : (data || {});
+      const escenario = info.escenario || escenarioPendiente;
+      modoPendiente = info.modo || modoPendiente || 'carrera';
+      const cfg = selectorPatos.getPatolSeleccionado();
+      escena.reiniciar(escenario, cfg.colorCuerpo, cfg.colorOjo, dificultadPendiente ?? 'normal', modoPendiente);
     },
   });
 
@@ -208,7 +212,9 @@ function engancharColores(escena, selectorPatos) {
     }
 
     const cfg = selectorPatos.getPatolSeleccionado();
-    escena.reiniciar(escenarioPendiente, cfg.colorCuerpo, cfg.colorOjo, dificultadPendiente ?? 'normal');
+    escena.reiniciar(escenarioPendiente, cfg.colorCuerpo, cfg.colorOjo, dificultadPendiente ?? 'normal', modoPendiente ?? 'carrera');
+    ignorarEscenarioPropio = true;
+    setTimeout(() => { ignorarEscenarioPropio = false; }, 1000);
     emitirEscenario(escenarioPendiente, modoPendiente);
     mostrarVista('vista-juego');
   });

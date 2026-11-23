@@ -4,6 +4,38 @@ Historial de cambios y decisiones de desarrollo.
 
 ---
 
+## 2026-11-23
+
+### La Pirámide: lago, cámara fija y cubos inestables
+
+**Lago que sube**
+- Capa azul sólida de 160×160 en `piramide.js`; sube 1 nivel cada 9s en Carrera y cada 6s en Rey
+- HUD "Agua X/11" en vez de Hambre; recoger hojas baja el agua 1 nivel
+- Si el agua alcanza al pato: pierde una vida, el agua retrocede 3 niveles y reaparece en la salida
+- Victoria al llegar al centro (nivel 11) sin depender de la barra de saciedad
+
+**Cámara y movimiento**
+- Cámara frontal fija en La Pirámide (`Math.PI / 2`) al iniciar y al respawnear
+- Se bloqueó avanzar hacia las orillas (radio creciente) y pasar a la mitad trasera (`z < 0`)
+- Torre e Islas conservan cámara orbital y movimiento completo
+
+**Minas con aviso**
+- Las minas dinámicas se pintan naranja 1.1s, rojo 1.0s y luego se activan
+- Se eliminó el parpadeo: las minas existentes quedan rojo fijo
+- Carrera sigue sin minas dinámicas; Rey mantiene minas con aviso
+
+**Cubos que caen**
+- ~22% de los cubos seguros pisados se desprenden 0.9s después, con giro y caída
+- Si el pato se queda en esa celda pierde una vida; la celda queda bloqueada
+- La salida y la cima quedan protegidas
+
+**Otros**
+- Corregido el eco de Socket.IO que forzaba el modo a `carrera` al iniciar partida
+- Tabla de ranking del menú con fondo más transparente (`rgba(255,255,255,0.12)`)
+- Documentación actualizada en `README.md`
+
+---
+
 ## 2026-11-17
 
 ### HUD en juego

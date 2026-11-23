@@ -49,9 +49,19 @@ const _MAT_OUTLINE = new THREE.MeshBasicMaterial({ color: 0x1f2430, side: THREE.
 const _HIDDEN = new THREE.Matrix4().makeScale(0, 0, 0);
 const _M4     = new THREE.Matrix4();
 
-// Mine blink: only the top face (+Y) = vertices 8–11 in _GEO_MINA
+// Top de mina: rojo fijo (sin parpadeo)
 const _C_MINA_A = new THREE.Color('#ff6b57');
-const _C_MINA_B = new THREE.Color('#ff9d3d');
+
+const AVISO_NARANJA = 1.1;
+const AVISO_ROJO    = 1.0;
+
+const PROB_CUBO_CAE   = 0.22;
+const RETARDO_CUBO_CAE = 0.9;
+
+const _GEO_AVISO = new THREE.PlaneGeometry(1.8, 1.8);
+_GEO_AVISO.rotateX(-Math.PI / 2);
+const _MAT_AVISO_NARANJA = new THREE.MeshBasicMaterial({ color: 0xff9d3d, side: THREE.DoubleSide, depthWrite: false });
+const _MAT_AVISO_ROJO    = new THREE.MeshBasicMaterial({ color: 0xff3b30, side: THREE.DoubleSide, depthWrite: false });
 
 function _setMineTopColor(c) {
   const attr = _GEO_MINA.attributes.color;
@@ -175,7 +185,11 @@ export function crearEstructura(escena, tipo = 'piramide', dificultad = 'normal'
   const minasPos       = new Set(); // "ix,iz"
   const minasOcultas   = new Map(); // "ix,iz" → {mIdx, outlineIdx}
   const cubosTapa      = new Map(); // "ix,iz" → {instIdx, outlineIdx, isMina}
-  const minasActiveIdx = [];        // mIdx values of active mines (for blinking)
+  const minasActiveIdx = [];        // mIdx values of active mines
+  const avisos         = new Map(); // "ix,iz" → {ix, iz, mesh, t, fase}
+  const pasosPendientes = new Map(); // "ix,iz" → {ix, iz, t}
+  const cubosCayendo    = [];        // cubos que se desprenden al pisarlos
+  const cubosCaidos     = new Set(); // "ix,iz" ya desaparecidos
 
   for (let n = 1; n <= 14; n++) cubosPorNivel.set(n, []);
 
@@ -249,17 +263,49 @@ export function crearEstructura(escena, tipo = 'piramide', dificultad = 'normal'
   }
 
   /* -------- Animación -------- */
-  let minaT = 0;
-  let minaVisible = true;
-
   function animarMinas(delta) {
-    // Parpadeo: solo cambia los 4 vértices del tope en _GEO_MINA
-    if (minasActiveIdx.length > 0) {
-      minaT += delta;
-      if (minaT >= 0.4) {
-        minaT = 0;
-        minaVisible = !minaVisible;
-        _setMineTopColor(minaVisible ? _C_MINA_A : _C_MINA_B);
+    // Aviso naranja → rojo → mina activa (sin parpadeo)
+    for (const [key, av] of avisos) {
+      av.t += delta;
+      if (av.fase === 0 && av.t >= AVISO_NARANJA) {
+        av.fase = 1;
+        av.mesh.material = _MAT_AVISO_ROJO;
+      }
+      if (av.t >= AVISO_NARANJA + AVISO_ROJO) {
+        escena.remove(av.mesh);
+        avisos.delete(key);
+        convertirEnMina(av.ix, av.iz);
+      }
+    }
+
+    // Cubos que se desprenden después de ser pisados
+    for (const [key, paso] of pasosPendientes) {
+      paso.t += delta;
+      if (paso.t >= RETARDO_CUBO_CAE) {
+        pasosPendientes.delete(key);
+        desprenderCubo(paso.ix, paso.iz);
+      }
+    }
+
+    if (cubosCayendo.length > 0) {
+      let moved = false;
+      for (let i = cubosCayendo.length - 1; i >= 0; i--) {
+        const c = cubosCayendo[i];
+        c.y -= 12 * delta;
+        _M4.makeRotationY((c.y0 - c.y) * 0.18);
+        _M4.setPosition(c.wx, c.y, c.wz);
+        instSeguro.setMatrixAt(c.instIdx, _M4);
+        instOutline.setMatrixAt(c.outlineIdx, _M4);
+        moved = true;
+        if (c.y < -30) {
+          instSeguro.setMatrixAt(c.instIdx, _HIDDEN);
+          instOutline.setMatrixAt(c.outlineIdx, _HIDDEN);
+          cubosCayendo.splice(i, 1);
+        }
+      }
+      if (moved) {
+        instSeguro.instanceMatrix.needsUpdate  = true;
+        instOutline.instanceMatrix.needsUpdate = true;
       }
     }
 
@@ -289,6 +335,48 @@ export function crearEstructura(escena, tipo = 'piramide', dificultad = 'normal'
   function esMina(ix, iz) {
     if (alturaFn(ix, iz) > _nivelMaxVisible) return false;
     return minasPos.has(`${ix},${iz}`);
+  }
+
+  function estaCaido(ix, iz) {
+    return cubosCaidos.has(`${ix},${iz}`);
+  }
+
+  function registrarPaso(ix, iz) {
+    const key = `${ix},${iz}`;
+    if (cubosCaidos.has(key) || pasosPendientes.has(key) || minasPos.has(key)) return false;
+    const tapa = cubosTapa.get(key);
+    if (!tapa || tapa.isMina) return false;
+    if (alturaFn(ix, iz) >= alturaFn(0, 0)) return false;
+    if (Math.random() >= PROB_CUBO_CAE) return false;
+    pasosPendientes.set(key, { ix, iz, t: 0 });
+    return true;
+  }
+
+  function desprenderCubo(ix, iz) {
+    const key = `${ix},${iz}`;
+    const tapa = cubosTapa.get(key);
+    if (!tapa || tapa.isMina || cubosCaidos.has(key)) return;
+
+    const y0 = alturaFn(ix, iz) * 2 - 1 + ELEVACION * 2;
+    cubosCayendo.push({ instIdx: tapa.instIdx, outlineIdx: tapa.outlineIdx, wx: ix * 2, wz: iz * 2, y: y0, y0 });
+    cubosCaidos.add(key);
+    cubosTapa.delete(key);
+    instSeguro.instanceMatrix.needsUpdate  = true;
+    instOutline.instanceMatrix.needsUpdate = true;
+  }
+
+  function avisarMina(ix, iz) {
+    const key = `${ix},${iz}`;
+    if (minasPos.has(key) || avisos.has(key)) return false;
+    const tapa = cubosTapa.get(key);
+    if (!tapa || tapa.isMina || alturaFn(ix, iz) > _nivelMaxVisible) return false;
+
+    const h = alturaFn(ix, iz);
+    const mesh = new THREE.Mesh(_GEO_AVISO, _MAT_AVISO_NARANJA);
+    mesh.position.set(ix * 2, h * 2 + ELEVACION * 2 + 0.06, iz * 2);
+    escena.add(mesh);
+    avisos.set(key, { ix, iz, mesh, t: 0, fase: 0 });
+    return true;
   }
 
   function convertirEnMina(ix, iz) {
@@ -321,6 +409,12 @@ export function crearEstructura(escena, tipo = 'piramide', dificultad = 'normal'
     const tapa = cubosTapa.get(key);
     if (!tapa) return;
 
+    const av = avisos.get(key);
+    if (av) {
+      escena.remove(av.mesh);
+      avisos.delete(key);
+    }
+
     if (tapa.isMina) {
       instMinas.setMatrixAt(tapa.instIdx, _HIDDEN);
       instMinas.instanceMatrix.needsUpdate = true;
@@ -348,12 +442,20 @@ export function crearEstructura(escena, tipo = 'piramide', dificultad = 'normal'
     minasOcultas.clear();
     cubosTapa.clear();
     minasActiveIdx.length = 0;
+    avisos.forEach((av) => escena.remove(av.mesh));
+    avisos.clear();
+    pasosPendientes.clear();
+    cubosCayendo.length = 0;
+    cubosCaidos.clear();
   }
 
   return {
     alturaFn,
     animarMinas,
     esMina,
+    estaCaido,
+    registrarPaso,
+    avisarMina,
     convertirEnMina,
     eliminarCubo,
     limpiar,
@@ -361,6 +463,7 @@ export function crearEstructura(escena, tipo = 'piramide', dificultad = 'normal'
     elevacion: ELEVACION,
     get nivelMaxVisible() { return _nivelMaxVisible; },
     get minasCount()      { return minasPos.size; },
+    get minasPendientes() { return avisos.size; },
     get tapasCount()      { return cubosTapa.size; },
   };
 }
