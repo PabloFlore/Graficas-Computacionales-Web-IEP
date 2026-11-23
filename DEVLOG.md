@@ -29,6 +29,13 @@ Historial de cambios y decisiones de desarrollo.
 - Si el pato se queda en esa celda pierde una vida; la celda queda bloqueada
 - La salida y la cima quedan protegidas
 
+**Obstáculos: tortugas y hierba**
+- Nuevo `js/motor/obstaculos.js` con mallas procedurales low-poly y spawn por dificultad en los 3 escenarios
+- Tortuga: bloquea su celda, patrulla en eje X 2 celdas (fácil) o 3 (normal/difícil), 1 celda cada 1.5/1.2/0.9s
+- La tortuga invierte sentido en extremos y evita minas, cubos caídos, items, inicio, centro y celdas ocupadas por el pato
+- Hierba: al aterrizar se consume y el siguiente salto dura 0.75s en vez de 0.45s; reaparece cada 8s
+- Spawn excluye siempre `z < 0` en La Pirámide (cubos café)
+
 **Otros**
 - Corregido el eco de Socket.IO que forzaba el modo a `carrera` al iniciar partida
 - Tabla de ranking del menú con fondo más transparente (`rgba(255,255,255,0.12)`)

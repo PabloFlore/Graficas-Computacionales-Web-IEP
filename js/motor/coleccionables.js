@@ -106,6 +106,10 @@ export function crearSistemaColeccionables(scene, alturaFn, rango) {
     return n;
   }
 
+  function tieneItem(ix, iz) {
+    return activos.has(`${ix},${iz}`);
+  }
+
   function recoger(ix, iz) {
     const key = `${ix},${iz}`;
     const item = activos.get(key);
@@ -135,5 +139,5 @@ export function crearSistemaColeccionables(scene, alturaFn, rango) {
     activos.clear();
   }
 
-  return { spawn, spawnAleatorio, spawnEnCuadrante, itemsEnCuadrante, recoger, animar, limpiar };
+  return { spawn, spawnAleatorio, spawnEnCuadrante, itemsEnCuadrante, tieneItem, recoger, animar, limpiar };
 }

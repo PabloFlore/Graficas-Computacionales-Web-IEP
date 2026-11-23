@@ -97,6 +97,7 @@ PORT=8080 npm start
 │   │   ├── escena.js          Escena 3D, bucle de juego y HUD
 │   │   ├── piramide.js        Cubos de pirámide/torre/islas, minas y agua
 │   │   ├── coleccionables.js  Objetos y racha de puntos
+│   │   ├── obstaculos.js      Tortugas bloqueadoras y hierba
 │   │   ├── pato.js            Modelo del pato
 │   │   ├── selector-patos.js  Selección de pato
 │   │   └── explosion.js       Efecto al perder una vida
@@ -167,7 +168,8 @@ puerto o tiene contraseña.
 `js/motor/escena.js` arma la escena con Three.js y gestiona el bucle de juego, el pato,
 la cámara, el HUD, los coleccionables y la comunicación con Socket.IO. Los escenarios se
 construyen en `js/motor/piramide.js` con instancias de cubos; los objetos están en
-`js/motor/coleccionables.js` y los efectos en `js/motor/explosion.js` y `nubes.js`.
+`js/motor/coleccionables.js`, los obstáculos en `js/motor/obstaculos.js` y los efectos en
+`js/motor/explosion.js` y `nubes.js`.
 
 ### Escenarios
 
@@ -180,9 +182,13 @@ construyen en `js/motor/piramide.js` con instancias de cubos; los objetos están
 - **Torre e Islas** — conservan la cámara orbital, la saciedad/nube como condición de
   victoria y las minas dinámicas sin aviso.
 
-La dificultad (`facil`, `normal`, `dificil`) ajusta la cantidad de minas y objetos. El
-modo `carrera` desactiva las minas dinámicas en La Pirámide para centrar el reto en el
-agua; `rey` las mantiene.
+En los 3 escenarios hay **tortugas** que bloquean su celda y patrullan de 2 a 3 casillas
+en eje X, y **hierba** que se consume al pisarla y hace que el siguiente salto dure
+0.75s en vez de 0.45s. En La Pirámide nunca aparecen en la mitad trasera (`z < 0`).
+
+La dificultad (`facil`, `normal`, `dificil`) ajusta la cantidad de minas, objetos,
+tortugas y hierba. El modo `carrera` desactiva las minas dinámicas en La Pirámide para
+centrar el reto en el agua; `rey` las mantiene.
 
 ---
 
@@ -195,6 +201,7 @@ Funciona:
 - Login de Facebook (nombre y foto) y multijugador global simple con Socket.IO
 - Menú responsive con ranking móvil de 5 filas y botón "Ver más"
 - La Pirámide: agua que sube, aviso de minas, cubos que caen y cámara/movimiento restringido
+- Tortugas que patrullan y bloquean el paso, y hierba que retrasa el siguiente salto
 
 Pendiente:
 

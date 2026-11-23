@@ -3,6 +3,7 @@ import { crearEstructura } from './piramide.js';
 import { crearPato } from './pato.js';
 import { crearExplosion } from './explosion.js';
 import { crearSistemaColeccionables } from './coleccionables.js';
+import { crearSistemaObstaculos } from './obstaculos.js';
 
 const INICIO_POR_ESCENARIO = {
   piramide: { x: 0, z: 10 },
@@ -131,12 +132,34 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
   const ALTURA_ARCO = 2.4;
   let saltoDesde = { x: 0, y: 0, z: 0 };
   let saltoHasta = { x: 0, y: 0, z: 0 };
+  let duracionSaltoActual = DURACION_SALTO;
+  let saltoLentoPendiente = false;
 
   /* ---------- Explosión actual ---------- */
   let explosionActual = null;
 
   /* ---------- Coleccionables ---------- */
   let coleccionables = crearSistemaColeccionables(scene, alturaFn, RANGO_POR_ESCENARIO[escenarioActual]);
+
+  /* ---------- Obstáculos: tortugas y hierba ---------- */
+  function puedeOcuparObstaculo(ix, iz) {
+    if (alturaFn(ix, iz) <= 0) return false;
+    if (escenarioActual === 'piramide' && iz < 0) return false;
+    const inicio = INICIO_POR_ESCENARIO[escenarioActual];
+    if (inicio && ix === inicio.x && iz === inicio.z) return false;
+    if (ix === 0 && iz === 0) return false;
+    if (estructura.esMina(ix, iz) || estructura.estaCaido(ix, iz)) return false;
+    if (coleccionables.tieneItem(ix, iz)) return false;
+    return true;
+  }
+
+  let obstaculos = crearSistemaObstaculos(
+    scene,
+    alturaFn,
+    RANGO_POR_ESCENARIO[escenarioActual],
+    (ix, iz) => yMundo(ix, iz),
+    puedeOcuparObstaculo
+  );
 
   /* ---------- Ticks de minas e items ---------- */
   let minaTick = 0;
@@ -322,6 +345,8 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     celdaZ = inicio.z;
     saltando = false;
     saltoT = 0;
+    duracionSaltoActual = DURACION_SALTO;
+    saltoLentoPendiente = false;
     jugador.position.set(celdaX * 2, yMundo(celdaX, celdaZ), celdaZ * 2);
     camAngle  = escenarioActual === 'piramide' ? Math.PI / 2 : Math.atan2(inicio.z, inicio.x);
     camTarget = camAngle;
@@ -449,6 +474,8 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
       racha = 0;
     }
 
+    if (obstaculos.consumirHierba(x, z)) saltoLentoPendiente = true;
+
     if (estructura.esMina(x, z)) {
       perderVida(true, x, z);
       return;
@@ -508,6 +535,8 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
 
     if (escenarioActual === 'piramide' && estructura.estaCaido(nx, nz)) return;
 
+    if (obstaculos.estaBloqueada(nx, nz)) return;
+
     // La mitad trasera (z < 0) queda fuera de alcance en La Pirámide
     if (escenarioActual === 'piramide' && nz < 0) return;
 
@@ -535,6 +564,8 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
       camTarget = Math.atan2(celdaZ, celdaX);
     }
 
+    duracionSaltoActual = saltoLentoPendiente ? DURACION_SALTO * 1.65 : DURACION_SALTO;
+    saltoLentoPendiente = false;
     saltando = true;
     saltoT = 0;
 
@@ -612,7 +643,7 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     if (!estaActivo) { renderer.render(scene, camera); return; }
 
     if (saltando) {
-      saltoT = Math.min(1, saltoT + delta / DURACION_SALTO);
+      saltoT = Math.min(1, saltoT + delta / duracionSaltoActual);
       const t = saltoT;
       jugador.position.x = lerp(saltoDesde.x, saltoHasta.x, t);
       jugador.position.z = lerp(saltoDesde.z, saltoHasta.z, t);
@@ -660,6 +691,13 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     }
 
     coleccionables.animar(delta);
+    obstaculos.animar(delta, {
+      celdaX: saltando ? Math.round(saltoDesde.x / 2) : celdaX,
+      celdaZ: saltando ? Math.round(saltoDesde.z / 2) : celdaZ,
+      destinoX: saltando ? Math.round(saltoHasta.x / 2) : celdaX,
+      destinoZ: saltando ? Math.round(saltoHasta.z / 2) : celdaZ,
+      saltando,
+    });
     estructura.animarMinas(delta);
 
     if (nubeCima && nubeCima.visible) {
@@ -706,6 +744,7 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
   function reiniciar(tipo = 'piramide', colorHex = patoColor, colorOjo = patoOjoColor, dificultad = dificultadActual, modo = 'carrera') {
     estructura.limpiar();
     coleccionables.limpiar();
+    obstaculos.limpiar();
     if (explosionActual) { explosionActual = null; }
 
     escenarioActual  = tipo;
@@ -719,6 +758,14 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     elevacion = estructura.elevacion || 0;
 
     coleccionables = crearSistemaColeccionables(scene, alturaFn, RANGO_POR_ESCENARIO[tipo] || 5);
+    obstaculos = crearSistemaObstaculos(
+      scene,
+      alturaFn,
+      RANGO_POR_ESCENARIO[tipo] || 5,
+      (ix, iz) => yMundo(ix, iz),
+      puedeOcuparObstaculo
+    );
+    obstaculos.configurar(dificultadActual);
     minaTick = 0;
     itemTick  = 0;
 
@@ -732,6 +779,8 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     celdaZ = inicio.z;
     saltando = false;
     saltoT = 0;
+    duracionSaltoActual = DURACION_SALTO;
+    saltoLentoPendiente = false;
     muerto = false;
     vidas = 3;
     score = 0;
@@ -778,6 +827,7 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
 
     nubeCima = crearNubeCima();
     preSpawnItems();
+    obstaculos.poblar({ celdaX, celdaZ });
     actualizarBarraAgua();
     const elBar = document.getElementById('hud-saciedad-relleno');
     if (elBar) elBar.classList.remove('saciedad__relleno--llena');
