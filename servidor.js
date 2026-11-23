@@ -2,21 +2,6 @@ const express = require('express');
 const { createServer } = require('node:http');
 const { join } = require('node:path');
 const { Server } = require('socket.io');
-const fs = require('node:fs');
-
-const SCORES_FILE = join(__dirname, 'data', 'scores.json');
-
-function leerScores() {
-  try {
-    return JSON.parse(fs.readFileSync(SCORES_FILE, 'utf8'));
-  } catch {
-    return [];
-  }
-}
-
-function guardarScores(scores) {
-  fs.writeFileSync(SCORES_FILE, JSON.stringify(scores, null, 2), 'utf8');
-}
 
 const app = express();
 const server = createServer(app);
@@ -24,27 +9,9 @@ const io = new Server(server);
 
 const PUERTO = process.env.PORT || 4000;
 
-app.use(express.json());
-
-// GET /api/scores → top 10 ordenados por puntos
-app.get('/api/scores', (req, res) => {
-  const scores = leerScores()
-    .sort((a, b) => b.puntos - a.puntos)
-    .slice(0, 10);
-  res.json(scores);
-});
-
-// POST /api/scores { nombre, puntos } → guarda un nuevo score
-app.post('/api/scores', (req, res) => {
-  const { nombre, puntos } = req.body;
-  if (!nombre || puntos === undefined || isNaN(Number(puntos))) {
-    return res.status(400).json({ error: 'Faltan datos: nombre y puntos son obligatorios.' });
-  }
-  const scores = leerScores();
-  scores.push({ nombre: String(nombre).trim(), puntos: Number(puntos) });
-  guardarScores(scores);
-  res.json({ ok: true });
-});
+// El WebService PHP corre en Apache (:80). Express no debe servir el código
+// PHP en crudo, así que cualquier /api se corta antes del estático.
+app.use('/api', (req, res) => res.status(404).end());
 
 app.use(express.static(join(__dirname)));
 

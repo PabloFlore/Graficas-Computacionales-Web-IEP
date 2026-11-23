@@ -4,7 +4,7 @@ import { iniciarFormulario } from './red/formulario.js';
 import { iniciarMultijugador, conectarJugador, enviarPosicion, emitirEscenario } from './red/multijugador.js';
 import { iniciarSelectorPatos } from './motor/selector-patos.js';
 import { iniciarPatoMenu } from './motor/pato-menu.js';
-import { cargarPuntuaciones, enviarPuntuacion } from './red/puntuaciones.js';
+import { cargarPuntuaciones, enviarPuntuacion, obtenerPuntuaciones } from './red/puntuaciones.js';
 import { iniciarPreviewsEscenario } from './motor/previews-escenario.js';
 
 let escenarioPendiente = 'piramide';
@@ -45,8 +45,7 @@ async function cargarRankingMenu() {
   const lista = document.getElementById('ranking-menu-lista');
   if (!lista) return;
   try {
-    const res = await fetch('/api/scores');
-    const scores = await res.json();
+    const scores = await obtenerPuntuaciones();
     if (scores.length === 0) {
       lista.innerHTML = '<li class="ranking-menu__cargando">Sin puntuaciones aún</li>';
       return;
