@@ -35,6 +35,7 @@ Historial de cambios y decisiones de desarrollo.
 - La tortuga invierte sentido en extremos y evita minas, cubos caídos, items, inicio, centro y celdas ocupadas por el pato
 - Hierba: al aterrizar se consume y el siguiente salto dura 0.75s en vez de 0.45s; reaparece cada 8s
 - Spawn excluye siempre `z < 0` en La Pirámide (cubos café)
+- Corregida visibilidad: los obstáculos se colocan sobre la tapa del cubo (`+1`) y spawnean hasta 2 niveles por encima del pato; se recolocan al respawnear
 
 **Otros**
 - Corregido el eco de Socket.IO que forzaba el modo a `carrera` al iniciar partida

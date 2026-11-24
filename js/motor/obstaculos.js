@@ -7,6 +7,7 @@ const CONFIG = {
 };
 
 const INTERVALO_HIERBA = 8;
+const SOBRE_CUBO = 1;
 const MAT_CAPARAZON = new THREE.MeshPhongMaterial({ color: 0x5f8a3a, flatShading: true });
 const MAT_CAPARAZON_CLARO = new THREE.MeshPhongMaterial({ color: 0x7fae55, flatShading: true });
 const MAT_CABEZA = new THREE.MeshPhongMaterial({ color: 0x9bc46a, flatShading: true });
@@ -74,8 +75,18 @@ export function crearSistemaObstaculos(scene, alturaFn, rango, baseYFn, puedeOcu
 
   function clave(ix, iz) { return `${ix},${iz}`; }
 
-  function libre(ix, iz, ctx = {}) {
+  function accesible(ix, iz, ctx = {}) {
     if (!puedeOcupar(ix, iz)) return false;
+    if (ctx.celdaX !== undefined) {
+      const refX = ctx.destinoX !== undefined ? ctx.destinoX : ctx.celdaX;
+      const refZ = ctx.destinoZ !== undefined ? ctx.destinoZ : ctx.celdaZ;
+      if (alturaFn(ix, iz) > alturaFn(refX, refZ) + 2) return false;
+    }
+    return true;
+  }
+
+  function libre(ix, iz, ctx = {}) {
+    if (!accesible(ix, iz, ctx)) return false;
     if (tortugas.has(clave(ix, iz))) return false;
     if (hierbas.has(clave(ix, iz))) return false;
     if (ctx.celdaX === ix && ctx.celdaZ === iz) return false;
@@ -102,13 +113,13 @@ export function crearSistemaObstaculos(scene, alturaFn, rango, baseYFn, puedeOcu
     const minX = Math.max(-rango, centro.ix - medio);
     const maxX = Math.min(rango, centro.ix + medio);
     for (let x = minX; x <= maxX; x++) {
-      if (!puedeOcupar(x, centro.iz)) return false;
+      if (!accesible(x, centro.iz, ctx)) return false;
     }
 
     const dir = Math.random() < 0.5 ? 1 : -1;
     const ix = minX + Math.floor(Math.random() * (maxX - minX + 1));
     const grupo = crearTortuga();
-    const baseY = baseYFn(ix, centro.iz);
+    const baseY = baseYFn(ix, centro.iz) + SOBRE_CUBO;
     grupo.position.set(ix * 2, baseY + 0.1, centro.iz * 2);
     grupo.rotation.y = dir > 0 ? 0 : Math.PI;
     scene.add(grupo);
@@ -120,7 +131,7 @@ export function crearSistemaObstaculos(scene, alturaFn, rango, baseYFn, puedeOcu
     const celda = celdaAleatoria(ctx);
     if (!celda) return false;
     const grupo = crearHierba();
-    const baseY = baseYFn(celda.ix, celda.iz);
+    const baseY = baseYFn(celda.ix, celda.iz) + SOBRE_CUBO;
     grupo.position.set(celda.ix * 2, baseY + 0.08, celda.iz * 2);
     scene.add(grupo);
     hierbas.set(clave(celda.ix, celda.iz), { grupo, baseY, t: Math.random() * Math.PI * 2 });
@@ -167,7 +178,7 @@ export function crearSistemaObstaculos(scene, alturaFn, rango, baseYFn, puedeOcu
       tor.t = 0;
 
       let sig = tor.ix + tor.dir;
-      const ocupado = (x) => x < tor.minX || x > tor.maxX || ocupadas.has(clave(x, tor.iz)) || !puedeOcupar(x, tor.iz);
+      const ocupado = (x) => x < tor.minX || x > tor.maxX || ocupadas.has(clave(x, tor.iz)) || !accesible(x, tor.iz, ctx);
       if (ocupado(sig)) {
         tor.dir *= -1;
         sig = tor.ix + tor.dir;
@@ -179,7 +190,7 @@ export function crearSistemaObstaculos(scene, alturaFn, rango, baseYFn, puedeOcu
     movimientos.forEach(({ key, tor, sig }) => {
       tortugas.delete(key);
       tor.ix = sig;
-      tor.baseY = baseYFn(sig, tor.iz);
+      tor.baseY = baseYFn(sig, tor.iz) + SOBRE_CUBO;
       tor.grupo.position.set(sig * 2, tor.baseY + 0.1, tor.iz * 2);
       tor.grupo.rotation.y = tor.dir > 0 ? 0 : Math.PI;
       tortugas.set(clave(sig, tor.iz), tor);

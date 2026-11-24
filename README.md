@@ -185,6 +185,7 @@ construyen en `js/motor/piramide.js` con instancias de cubos; los objetos están
 En los 3 escenarios hay **tortugas** que bloquean su celda y patrullan de 2 a 3 casillas
 en eje X, y **hierba** que se consume al pisarla y hace que el siguiente salto dure
 0.75s en vez de 0.45s. En La Pirámide nunca aparecen en la mitad trasera (`z < 0`).
+Se ubican sobre la tapa del cubo y spawnean cerca de la altura actual del pato.
 
 La dificultad (`facil`, `normal`, `dificil`) ajusta la cantidad de minas, objetos,
 tortugas y hierba. El modo `carrera` desactiva las minas dinámicas en La Pirámide para

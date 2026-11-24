@@ -356,6 +356,8 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     patoRotTarget = Math.atan2(inicio.z, -inicio.x);
     jugador.rotation.y = patoRotTarget;
     bob.visible = true;
+    obstaculos.limpiar();
+    obstaculos.poblar({ celdaX, celdaZ });
   }
 
   /* ---------- Color del cronómetro según densidad de minas ---------- */
