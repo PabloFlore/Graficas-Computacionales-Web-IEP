@@ -1,12 +1,12 @@
 import * as THREE from 'three';
 
 const CONFIG = {
-  facil:   { tortugas: 1, rango: 2, paso: 1.5, hierbas: 3 },
-  normal:  { tortugas: 2, rango: 3, paso: 1.2, hierbas: 5 },
-  dificil: { tortugas: 3, rango: 3, paso: 0.9, hierbas: 7 },
+  facil:   { tortugas: 1, rango: 2, paso: 1.5, hierbas: 6 },
+  normal:  { tortugas: 2, rango: 3, paso: 1.2, hierbas: 10 },
+  dificil: { tortugas: 3, rango: 3, paso: 0.9, hierbas: 14 },
 };
 
-const INTERVALO_HIERBA = 8;
+const INTERVALO_HIERBA = 4;
 const SOBRE_CUBO = 1;
 const MAT_CAPARAZON = new THREE.MeshPhongMaterial({ color: 0x5f8a3a, flatShading: true });
 const MAT_CAPARAZON_CLARO = new THREE.MeshPhongMaterial({ color: 0x7fae55, flatShading: true });
@@ -80,7 +80,7 @@ export function crearSistemaObstaculos(scene, alturaFn, rango, baseYFn, puedeOcu
     if (ctx.celdaX !== undefined) {
       const refX = ctx.destinoX !== undefined ? ctx.destinoX : ctx.celdaX;
       const refZ = ctx.destinoZ !== undefined ? ctx.destinoZ : ctx.celdaZ;
-      if (alturaFn(ix, iz) > alturaFn(refX, refZ) + 2) return false;
+      if (alturaFn(ix, iz) > alturaFn(refX, refZ) + 3) return false;
     }
     return true;
   }
@@ -204,8 +204,16 @@ export function crearSistemaObstaculos(scene, alturaFn, rango, baseYFn, puedeOcu
     hierbaTick += delta;
     if (hierbaTick >= INTERVALO_HIERBA) {
       hierbaTick = 0;
-      if (hierbas.size < config.hierbas) spawnHierba(ctx);
+      const faltan = config.hierbas - hierbas.size;
+      for (let i = 0; i < Math.min(2, faltan); i++) spawnHierba(ctx);
     }
+  }
+
+  function invertirTortugas() {
+    tortugas.forEach((tor) => {
+      tor.dir *= -1;
+      tor.grupo.rotation.y = tor.dir > 0 ? 0 : Math.PI;
+    });
   }
 
   function limpiar() {
@@ -222,6 +230,7 @@ export function crearSistemaObstaculos(scene, alturaFn, rango, baseYFn, puedeOcu
     estaBloqueada,
     consumirHierba,
     animar,
+    invertirTortugas,
     limpiar,
     get tortugasCount() { return tortugas.size; },
     get hierbasCount() { return hierbas.size; },

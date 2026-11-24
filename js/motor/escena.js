@@ -134,6 +134,7 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
   let saltoHasta = { x: 0, y: 0, z: 0 };
   let duracionSaltoActual = DURACION_SALTO;
   let saltoLentoPendiente = false;
+  let alturaSaltoDesde = 0;
 
   /* ---------- Explosión actual ---------- */
   let explosionActual = null;
@@ -348,6 +349,7 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     duracionSaltoActual = DURACION_SALTO;
     saltoLentoPendiente = false;
     jugador.position.set(celdaX * 2, yMundo(celdaX, celdaZ), celdaZ * 2);
+    alturaSaltoDesde = alturaEfectiva(celdaX, celdaZ);
     camAngle  = escenarioActual === 'piramide' ? Math.PI / 2 : Math.atan2(inicio.z, inicio.x);
     camTarget = camAngle;
     camLookX  = celdaX * 2;
@@ -478,6 +480,8 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
 
     if (obstaculos.consumirHierba(x, z)) saltoLentoPendiente = true;
 
+    if (!muerto && alturaEfectiva(x, z) < alturaSaltoDesde) obstaculos.invertirTortugas();
+
     if (estructura.esMina(x, z)) {
       perderVida(true, x, z);
       return;
@@ -542,13 +546,6 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     // La mitad trasera (z < 0) queda fuera de alcance en La Pirámide
     if (escenarioActual === 'piramide' && nz < 0) return;
 
-    // En la pirámide no se permite bajar hacia las orillas ni hacia atrás
-    if (escenarioActual === 'piramide') {
-      const radioActual = Math.max(Math.abs(celdaX), Math.abs(celdaZ));
-      const radioNuevo  = Math.max(Math.abs(nx), Math.abs(nz));
-      if (radioNuevo > radioActual) return;
-    }
-
     if (alturaFn(nx, nz) <= 0) return;
 
     if (dx ===  1) patoRotTarget =  0;
@@ -556,6 +553,7 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     if (dz === -1) patoRotTarget =  Math.PI / 2;
     if (dz ===  1) patoRotTarget = -Math.PI / 2;
 
+    alturaSaltoDesde = alturaEfectiva(celdaX, celdaZ);
     saltoDesde = { x: celdaX * 2, y: jugador.position.y, z: celdaZ * 2 };
     saltoHasta = { x: nx * 2, y: yMundo(nx, nz), z: nz * 2 };
     celdaX = nx;
@@ -807,6 +805,7 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     bob.visible = true;
 
     jugador.position.set(celdaX * 2, yMundo(celdaX, celdaZ), celdaZ * 2);
+    alturaSaltoDesde = alturaEfectiva(celdaX, celdaZ);
 
     camAngle  = escenarioActual === 'piramide' ? Math.PI / 2 : Math.atan2(inicio.z, inicio.x);
     camTarget = camAngle;

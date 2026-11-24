@@ -176,16 +176,18 @@ construyen en `js/motor/piramide.js` con instancias de cubos; los objetos están
 - **La Pirámide** — 11 niveles, salida en `(0,10)` y victoria al llegar al centro. Un
   lago azul sólido sube 1 nivel cada 9s en Carrera y cada 6s en Rey; recoger hojas lo
   baja 1 nivel. Si el agua alcanza al pato se pierde una vida y el agua retrocede 3
-  niveles. La cámara es frontal fija: no se puede volver a la mitad trasera (`z < 0`)
-  ni alejarse hacia las orillas. Alrededor del 22% de los cubos seguros pisados se
+  niveles. La cámara es frontal fija: no se puede volver a la mitad trasera (`z < 0`),
+  pero sí se puede bajar. Alrededor del 22% de los cubos seguros pisados se
   desprenden poco después; las minas dinámicas avisan naranja → rojo antes de activarse.
 - **Torre e Islas** — conservan la cámara orbital, la saciedad/nube como condición de
   victoria y las minas dinámicas sin aviso.
 
 En los 3 escenarios hay **tortugas** que bloquean su celda y patrullan de 2 a 3 casillas
 en eje X, y **hierba** que se consume al pisarla y hace que el siguiente salto dure
-0.75s en vez de 0.45s. En La Pirámide nunca aparecen en la mitad trasera (`z < 0`).
-Se ubican sobre la tapa del cubo y spawnean cerca de la altura actual del pato.
+0.75s en vez de 0.45s. Hay 6/10/14 hierbas según dificultad y reaparecen de a 2 cada
+4s. En La Pirámide nunca aparecen en la mitad trasera (`z < 0`). Se ubican sobre la
+tapa del cubo y spawnean cerca de la altura actual del pato. Al bajar de nivel, las
+tortugas invierten su sentido de patrulla.
 
 La dificultad (`facil`, `normal`, `dificil`) ajusta la cantidad de minas, objetos,
 tortugas y hierba. El modo `carrera` desactiva las minas dinámicas en La Pirámide para

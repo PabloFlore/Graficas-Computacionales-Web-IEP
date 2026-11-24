@@ -33,9 +33,11 @@ Historial de cambios y decisiones de desarrollo.
 - Nuevo `js/motor/obstaculos.js` con mallas procedurales low-poly y spawn por dificultad en los 3 escenarios
 - Tortuga: bloquea su celda, patrulla en eje X 2 celdas (fácil) o 3 (normal/difícil), 1 celda cada 1.5/1.2/0.9s
 - La tortuga invierte sentido en extremos y evita minas, cubos caídos, items, inicio, centro y celdas ocupadas por el pato
-- Hierba: al aterrizar se consume y el siguiente salto dura 0.75s en vez de 0.45s; reaparece cada 8s
+- Hierba: al aterrizar se consume y el siguiente salto dura 0.75s en vez de 0.45s; hay 6/10/14 según dificultad y reaparecen de a 2 cada 4s
 - Spawn excluye siempre `z < 0` en La Pirámide (cubos café)
-- Corregida visibilidad: los obstáculos se colocan sobre la tapa del cubo (`+1`) y spawnean hasta 2 niveles por encima del pato; se recolocan al respawnear
+- Corregida visibilidad: los obstáculos se colocan sobre la tapa del cubo (`+1`) y spawnean hasta 3 niveles por encima del pato; se recolocan al respawnear
+- El pato ya puede bajar en La Pirámide: se quitó el guard de radio, pero `z < 0` sigue bloqueado
+- Al aterrizar en un nivel más bajo, todas las tortugas invierten su sentido de patrulla
 
 **Otros**
 - Corregido el eco de Socket.IO que forzaba el modo a `carrera` al iniciar partida
