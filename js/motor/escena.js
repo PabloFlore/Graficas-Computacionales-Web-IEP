@@ -7,9 +7,19 @@ import { crearSistemaObstaculos } from './obstaculos.js';
 
 const INICIO_POR_ESCENARIO = {
   piramide: { x: 0, z: 10 },
-  torre:    { x: 5, z: 0 },
+  torre:    { x: 3, z: 0 },
   islas:    { x: -10, z: 4 },
 };
+
+const TRAMPOLINES_TORRE = [[1, 2], [2, -1]];
+const TRAMPOLIN_CICLO = 5;
+const TRAMPOLIN_ACTIVO = 3;
+
+const CELDAS_PROTEGIDAS = [
+  ...Object.values(INICIO_POR_ESCENARIO).map(({ x, z }) => [x, z]),
+  [0, 0],
+  ...TRAMPOLINES_TORRE,
+];
 
 const FONDO_POR_ESCENARIO = {
   piramide: '#6cc0f0',
@@ -24,11 +34,19 @@ const RANGO_POR_ESCENARIO = {
 };
 
 const NIVEL_MAXIMO_POR_ESCENARIO = { piramide: 11, torre: 14, islas: 11 };
+const MAX_SUBIDA_POR_ESCENARIO   = { piramide: 1, torre: 1, islas: 2 };
+const RANGO_SPAWN_POR_ESCENARIO  = { piramide: 10, torre: 5, islas: 5 };
+
+const ITEMS_POR_CUADRANTE = {
+  piramide: { facil: 3, normal: 2, dificil: 1 },
+  torre:    { facil: 6, normal: 5, dificil: 4 },
+  islas:    { facil: 6, normal: 5, dificil: 4 },
+};
+const ISLAS_LATERALES = [[-13, 0], [13, 0]];
 
 const INTERVALO_MINAS  = { facil: 2.0, normal: 1.2, dificil: 0.6 };
 const CAP_MINAS_PCT    = { facil: 0.25, normal: 0.45, dificil: 0.65 };
 const INTERVALO_ITEMS          = 1.5;
-const MIN_ITEMS_POR_CUADRANTE  = 5;
 const INTERVALO_AGUA           = { carrera: 9, rey: 6 };
 const BAJADA_AGUA_MUERTE       = 3;
 const CUADRANTES = [[1,1],[-1,1],[-1,-1],[1,-1]];
@@ -53,7 +71,7 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
   scene.add(sol);
 
   /* ---------- Estructura inicial ---------- */
-  let estructura = crearEstructura(scene, 'piramide');
+  let estructura = crearEstructura(scene, 'piramide', 'normal', CELDAS_PROTEGIDAS);
   let alturaFn = estructura.alturaFn;
   let escenarioActual = 'piramide';
   let elevacion = estructura.elevacion || 0;
@@ -89,7 +107,8 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
   let dificultadActual = 'normal';
 
   /* ---------- Saciedad ---------- */
-  const SACIEDAD_MAX = 30;
+  const SACIEDAD_MAX_POR_MODO = { carrera: 30, rey: 40 };
+  let saciedadMax = SACIEDAD_MAX_POR_MODO.carrera;
   let saciedad      = 0;
   let satisfecho    = false;
   let nubeCima      = null;
@@ -135,12 +154,18 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
   let duracionSaltoActual = DURACION_SALTO;
   let saltoLentoPendiente = false;
   let alturaSaltoDesde = 0;
+  let impulsoSalto = 0;
 
   /* ---------- Explosión actual ---------- */
   let explosionActual = null;
 
   /* ---------- Coleccionables ---------- */
-  let coleccionables = crearSistemaColeccionables(scene, alturaFn, RANGO_POR_ESCENARIO[escenarioActual]);
+  let coleccionables = crearSistemaColeccionables(
+    scene,
+    alturaFn,
+    RANGO_SPAWN_POR_ESCENARIO[escenarioActual],
+    (ix, iz) => yMundo(ix, iz)
+  );
 
   /* ---------- Obstáculos: tortugas y hierba ---------- */
   function puedeOcuparObstaculo(ix, iz) {
@@ -149,6 +174,7 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     const inicio = INICIO_POR_ESCENARIO[escenarioActual];
     if (inicio && ix === inicio.x && iz === inicio.z) return false;
     if (ix === 0 && iz === 0) return false;
+    if (escenarioActual === 'torre' && TRAMPOLINES_TORRE.some(([tx, tz]) => tx === ix && tz === iz)) return false;
     if (estructura.esMina(ix, iz) || estructura.estaCaido(ix, iz)) return false;
     if (coleccionables.tieneItem(ix, iz)) return false;
     return true;
@@ -157,7 +183,7 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
   let obstaculos = crearSistemaObstaculos(
     scene,
     alturaFn,
-    RANGO_POR_ESCENARIO[escenarioActual],
+    RANGO_SPAWN_POR_ESCENARIO[escenarioActual],
     (ix, iz) => yMundo(ix, iz),
     puedeOcuparObstaculo
   );
@@ -270,10 +296,49 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     return m;
   }
 
+  /* ---------- Trampolines de La Torre ---------- */
+  const geoTrampolin = new THREE.CylinderGeometry(0.72, 0.72, 0.14, 12);
+  let trampolines = [];
+  let trampolinT = 0;
+
+  function crearTrampolinesTorre() {
+    limpiarTrampolines();
+    if (escenarioActual !== 'torre') return;
+    TRAMPOLINES_TORRE.forEach(([ix, iz]) => {
+      const mat = new THREE.MeshPhongMaterial({ color: 0xffd45e, flatShading: true });
+      const m = new THREE.Mesh(geoTrampolin, mat);
+      m.position.set(ix * 2, yMundo(ix, iz) + 1.1, iz * 2);
+      scene.add(m);
+      trampolines.push(m);
+    });
+    trampolinT = 0;
+  }
+
+  function limpiarTrampolines() {
+    trampolines.forEach((m) => { scene.remove(m); m.material.dispose(); });
+    trampolines.length = 0;
+  }
+
+  function actualizarTrampolines(delta) {
+    if (trampolines.length === 0) return;
+    trampolinT = (trampolinT + delta) % TRAMPOLIN_CICLO;
+    const activo = trampolinT < TRAMPOLIN_ACTIVO;
+    trampolines.forEach((m) => {
+      m.material.color.setHex(activo ? 0xffd45e : 0x7a7a7a);
+      m.scale.y = activo ? 1 + Math.sin(trampolinT * 8) * 0.15 : 0.6;
+    });
+  }
+
+  function trampolinActivoEn(ix, iz) {
+    return escenarioActual === 'torre'
+      && trampolinT < TRAMPOLIN_ACTIVO
+      && TRAMPOLINES_TORRE.some(([tx, tz]) => tx === ix && tz === iz);
+  }
+
   /* ---------- Saciedad ---------- */
   function actualizarBarraSaciedad() {
     const el = document.getElementById('hud-saciedad-relleno');
-    if (el) el.style.width = `${(saciedad / SACIEDAD_MAX) * 100}%`;
+    if (el) el.style.width = `${(saciedad / saciedadMax) * 100}%`;
   }
 
   function actualizarBarraAgua() {
@@ -288,9 +353,9 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
 
   function actualizarSaciedad(pts) {
     if (satisfecho) return;
-    saciedad = Math.min(SACIEDAD_MAX, saciedad + pts);
+    saciedad = Math.min(saciedadMax, saciedad + pts);
     actualizarBarraSaciedad();
-    if (saciedad >= SACIEDAD_MAX) {
+    if (saciedad >= saciedadMax) {
       satisfecho = true;
       if (nubeCima) nubeCima.visible = true;
       const el = document.getElementById('hud-saciedad-relleno');
@@ -348,6 +413,7 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     saltoT = 0;
     duracionSaltoActual = DURACION_SALTO;
     saltoLentoPendiente = false;
+    impulsoSalto = 0;
     jugador.position.set(celdaX * 2, yMundo(celdaX, celdaZ), celdaZ * 2);
     alturaSaltoDesde = alturaEfectiva(celdaX, celdaZ);
     camAngle  = escenarioActual === 'piramide' ? Math.PI / 2 : Math.atan2(inicio.z, inicio.x);
@@ -393,8 +459,8 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
 
     // No superar el cap de minas por dificultad (contando las avisadas)
     const cap = Math.floor(estructura.tapasCount * (CAP_MINAS_PCT[dificultadActual] ?? 0.45));
-    const esPiramide = escenarioActual === 'piramide';
-    let enCurso = esPiramide ? estructura.minasPendientes : 0;
+    let enCurso = estructura.minasPendientes;
+    const conAviso = modoActual === 'rey';
     if (estructura.minasCount + enCurso >= cap) return;
 
     const nivelMax = NIVEL_MAXIMO_POR_ESCENARIO[escenarioActual];
@@ -410,9 +476,9 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
         const nivel = alturaFn(ix, iz);
         if (nivel <= 0 || nivel >= nivelMax) continue;
         if (Math.random() < nivel / nivelMax) {
-          const ok = esPiramide
+          const ok = conAviso
             ? estructura.avisarMina(ix, iz)
-            : (estructura.convertirEnMina(ix, iz), true);
+            : estructura.convertirEnMina(ix, iz);
           if (ok) { enCurso++; break; }
         }
       }
@@ -421,7 +487,12 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
 
   /* ---------- Spawn periódico de items ---------- */
   function itemsPorCuadrante() {
-    return escenarioActual === 'piramide' ? 2 : MIN_ITEMS_POR_CUADRANTE;
+    return ITEMS_POR_CUADRANTE[escenarioActual]?.[dificultadActual] ?? 2;
+  }
+
+  function spawnIslasLaterales() {
+    if (escenarioActual !== 'islas') return;
+    ISLAS_LATERALES.forEach(([ix, iz]) => coleccionables.spawn(ix, iz));
   }
 
   function preSpawnItems() {
@@ -430,6 +501,7 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
         coleccionables.spawnEnCuadrante(qx, qz);
       }
     }
+    spawnIslasLaterales();
   }
 
   function tickItems(delta) {
@@ -438,9 +510,11 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     if (itemTick < INTERVALO_ITEMS) return;
     itemTick = 0;
     for (const [qx, qz] of CUADRANTES) {
-      const faltantes = itemsPorCuadrante() - coleccionables.itemsEnCuadrante(qx, qz);
+      const faltantes = itemsPorCuadrante()
+        - coleccionables.itemsEnCuadrante(qx, qz, RANGO_SPAWN_POR_ESCENARIO[escenarioActual]);
       for (let i = 0; i < faltantes; i++) coleccionables.spawnEnCuadrante(qx, qz);
     }
+    spawnIslasLaterales();
   }
 
   /* ---------- Colisión con mina / agua ---------- */
@@ -480,6 +554,8 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
 
     if (obstaculos.consumirHierba(x, z)) saltoLentoPendiente = true;
 
+    if (trampolinActivoEn(x, z)) impulsoSalto = 1;
+
     if (!muerto && alturaEfectiva(x, z) < alturaSaltoDesde) obstaculos.invertirTortugas();
 
     if (estructura.esMina(x, z)) {
@@ -487,8 +563,8 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
       return;
     }
 
-    if (escenarioActual === 'piramide' && !muerto) {
-      const inicio = INICIO_POR_ESCENARIO.piramide;
+    if (!muerto) {
+      const inicio = INICIO_POR_ESCENARIO[escenarioActual];
       if (!(x === inicio.x && z === inicio.z)) estructura.registrarPaso(x, z);
     }
 
@@ -539,7 +615,7 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     const nx = celdaX + dx;
     const nz = celdaZ + dz;
 
-    if (escenarioActual === 'piramide' && estructura.estaCaido(nx, nz)) return;
+    if (estructura.estaCaido(nx, nz)) return;
 
     if (obstaculos.estaBloqueada(nx, nz)) return;
 
@@ -547,6 +623,9 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     if (escenarioActual === 'piramide' && nz < 0) return;
 
     if (alturaFn(nx, nz) <= 0) return;
+
+    const maxSubida = impulsoSalto > 0 ? 3 : (MAX_SUBIDA_POR_ESCENARIO[escenarioActual] ?? 1);
+    if (alturaEfectiva(nx, nz) - alturaEfectiva(celdaX, celdaZ) > maxSubida) return;
 
     if (dx ===  1) patoRotTarget =  0;
     if (dx === -1) patoRotTarget =  Math.PI;
@@ -566,6 +645,7 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
 
     duracionSaltoActual = saltoLentoPendiente ? DURACION_SALTO * 1.65 : DURACION_SALTO;
     saltoLentoPendiente = false;
+    impulsoSalto = 0;
     saltando = true;
     saltoT = 0;
 
@@ -592,6 +672,7 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
 
   nubeCima = crearNubeCima();
   planoAgua = crearPlanoAgua();
+  crearTrampolinesTorre();
   preSpawnItems();
   actualizarBarraAgua();
 
@@ -665,7 +746,7 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     }
 
     if (cronometroActivo) {
-      if (!(escenarioActual === 'piramide' && modoActual === 'carrera')) tickMinas(delta);
+      if (modoActual !== 'carrera') tickMinas(delta);
       tickItems(delta);
       actualizarCronometroColor();
     }
@@ -686,11 +767,12 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
       }
     }
 
-    if (!muerto && escenarioActual === 'piramide' && !saltando && estructura.estaCaido(celdaX, celdaZ)) {
+    if (!muerto && !saltando && estructura.estaCaido(celdaX, celdaZ)) {
       perderVida(false);
     }
 
     coleccionables.animar(delta);
+    actualizarTrampolines(delta);
     obstaculos.animar(delta, {
       celdaX: saltando ? Math.round(saltoDesde.x / 2) : celdaX,
       celdaZ: saltando ? Math.round(saltoDesde.z / 2) : celdaZ,
@@ -745,6 +827,7 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     estructura.limpiar();
     coleccionables.limpiar();
     obstaculos.limpiar();
+    limpiarTrampolines();
     if (explosionActual) { explosionActual = null; }
 
     escenarioActual  = tipo;
@@ -753,15 +836,21 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     dificultadActual = dificultad || 'normal';
     modoActual       = modo || 'carrera';
 
-    estructura = crearEstructura(scene, tipo, dificultadActual);
+    estructura = crearEstructura(scene, tipo, dificultadActual, CELDAS_PROTEGIDAS);
     alturaFn = estructura.alturaFn;
     elevacion = estructura.elevacion || 0;
+    crearTrampolinesTorre();
 
-    coleccionables = crearSistemaColeccionables(scene, alturaFn, RANGO_POR_ESCENARIO[tipo] || 5);
+    coleccionables = crearSistemaColeccionables(
+      scene,
+      alturaFn,
+      RANGO_SPAWN_POR_ESCENARIO[tipo] || 5,
+      (ix, iz) => yMundo(ix, iz)
+    );
     obstaculos = crearSistemaObstaculos(
       scene,
       alturaFn,
-      RANGO_POR_ESCENARIO[tipo] || 5,
+      RANGO_SPAWN_POR_ESCENARIO[tipo] || 5,
       (ix, iz) => yMundo(ix, iz),
       puedeOcuparObstaculo
     );
@@ -769,6 +858,7 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     minaTick = 0;
     itemTick  = 0;
 
+    saciedadMax = SACIEDAD_MAX_POR_MODO[modoActual] ?? SACIEDAD_MAX_POR_MODO.carrera;
     saciedad   = 0;
     satisfecho = false;
     nubeCimaT  = 0;
@@ -781,6 +871,7 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     saltoT = 0;
     duracionSaltoActual = DURACION_SALTO;
     saltoLentoPendiente = false;
+    impulsoSalto = 0;
     muerto = false;
     vidas = 3;
     score = 0;
@@ -830,6 +921,7 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     preSpawnItems();
     obstaculos.poblar({ celdaX, celdaZ });
     actualizarBarraAgua();
+    actualizarBarraSaciedad();
     const elBar = document.getElementById('hud-saciedad-relleno');
     if (elBar) elBar.classList.remove('saciedad__relleno--llena');
   }

@@ -177,10 +177,19 @@ construyen en `js/motor/piramide.js` con instancias de cubos; los objetos están
   lago azul sólido sube 1 nivel cada 9s en Carrera y cada 6s en Rey; recoger hojas lo
   baja 1 nivel. Si el agua alcanza al pato se pierde una vida y el agua retrocede 3
   niveles. La cámara es frontal fija: no se puede volver a la mitad trasera (`z < 0`),
-  pero sí se puede bajar. Alrededor del 22% de los cubos seguros pisados se
-  desprenden poco después; las minas dinámicas avisan naranja → rojo antes de activarse.
-- **Torre e Islas** — conservan la cámara orbital, la saciedad/nube como condición de
-  victoria y las minas dinámicas sin aviso.
+  pero sí se puede bajar. Entre el 10% y el 28% de los cubos seguros pisados se
+  desprenden poco después según la dificultad; las minas dinámicas avisan naranja → rojo
+  antes de activarse.
+- **Torre** — 14 niveles, cámara orbital y victoria al llegar al centro con la nube
+  invocada. Una base de nivel 1 rodea una escalera de caracol de 14 pasos que sube de
+  1 en 1; el pato arranca en `(3, 0)`. Comparte minas con aviso y cubos que caen con La
+  Pirámide, pero la escalera y el centro están protegidos. Dos trampolines en `(1, 2)` y
+  `(2, -1)` se recargan cada 5s (3s activos, 2s apagados) y permiten un salto de hasta
+  3 niveles.
+- **Islas** — 11 niveles, isla central, dos islas laterales unidas por puentes y la
+  misma condición de victoria que Torre. Los objetos y obstáculos se colocan sobre la
+  elevación del escenario y también aparecen en las islas laterales. Los puentes y los
+  centros nunca reciben minas ni cubos que caen, para no cortar la ruta.
 
 En los 3 escenarios hay **tortugas** que bloquean su celda y patrullan de 2 a 3 casillas
 en eje X, y **hierba** que se consume al pisarla y hace que el siguiente salto dure
@@ -189,9 +198,20 @@ en eje X, y **hierba** que se consume al pisarla y hace que el siguiente salto d
 tapa del cubo y spawnean cerca de la altura actual del pato. Al bajar de nivel, las
 tortugas invierten su sentido de patrulla.
 
-La dificultad (`facil`, `normal`, `dificil`) ajusta la cantidad de minas, objetos,
-tortugas y hierba. El modo `carrera` desactiva las minas dinámicas en La Pirámide para
-centrar el reto en el agua; `rey` las mantiene.
+El salto hacia arriba está limitado a 1 nivel en Pirámide y Torre y a 2 en Islas; las
+bajadas no tienen límite. En la Torre, un trampolín activo eleva el límite a 3 niveles
+para el siguiente salto.
+
+La dificultad (`facil`, `normal`, `dificil`) ajusta en los 3 escenarios la densidad de
+minas estáticas (Pirámide 1.5/3/6%, Torre 3/6/12%, Islas 2.5/5/10%), el intervalo y
+cap de minas dinámicas, la probabilidad de que un cubo pisado se desprenda
+(10/18/28%) y la cantidad de objetos (Pirámide 3/2/1 y Torre/Islas 6/5/4 por
+cuadrante). También cambia el número de tortugas y hierbas.
+
+El modo `carrera` desactiva las minas dinámicas en los 3 escenarios: en La Pirámide el
+reto es el agua que sube y en Torre/Islas, reunir la saciedad con la mayor racha
+posible. El modo `rey` activa minas dinámicas **con aviso** (naranja → rojo) en los 3
+escenarios y eleva la saciedad necesaria en Torre/Islas de 30 a 40.
 
 ---
 
@@ -205,6 +225,8 @@ Funciona:
 - Menú responsive con ranking móvil de 5 filas y botón "Ver más"
 - La Pirámide: agua que sube, aviso de minas, cubos que caen y cámara/movimiento restringido
 - Tortugas que patrullan y bloquean el paso, y hierba que retrasa el siguiente salto
+- Torre e Islas con la misma dificultad y modos de juego que La Pirámide, minas con aviso y cubos que caen
+- La Torre se sube por una escalera de caracol con trampolines recargables
 
 Pendiente:
 

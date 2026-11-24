@@ -64,7 +64,7 @@ function crearMesh(tipo) {
 
 const VIDA_ITEM = 25; // segundos antes de que un item desaparezca
 
-export function crearSistemaColeccionables(scene, alturaFn, rango) {
+export function crearSistemaColeccionables(scene, alturaFn, rango, baseYFn) {
   const activos = new Map(); // "ix,iz" → { grupo, tipo, baseY, t, vida }
 
   function spawn(ix, iz) {
@@ -74,7 +74,7 @@ export function crearSistemaColeccionables(scene, alturaFn, rango) {
     if (h <= 0) return;
     const tipo = TIPOS[Math.floor(Math.random() * TIPOS.length)];
     const grupo = crearMesh(tipo);
-    const baseY = h * 2 + 0.8;
+    const baseY = (baseYFn ? baseYFn(ix, iz) + 1 : h * 2) + 0.8;
     grupo.position.set(ix * 2, baseY, iz * 2);
     grupo.scale.setScalar(2.2);
     scene.add(grupo);
@@ -97,10 +97,11 @@ export function crearSistemaColeccionables(scene, alturaFn, rango) {
     spawn(ix, iz);
   }
 
-  function itemsEnCuadrante(qx, qz) {
+  function itemsEnCuadrante(qx, qz, limite = Infinity) {
     let n = 0;
     activos.forEach((_, key) => {
       const [ix, iz] = key.split(',').map(Number);
+      if (Math.abs(ix) > limite || Math.abs(iz) > limite) return;
       if ((qx > 0 ? ix >= 0 : ix < 0) && (qz > 0 ? iz >= 0 : iz < 0)) n++;
     });
     return n;

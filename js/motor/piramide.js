@@ -56,7 +56,7 @@ const _C_MINA_A = new THREE.Color('#ff6b57');
 const AVISO_NARANJA = 1.1;
 const AVISO_ROJO    = 1.0;
 
-const PROB_CUBO_CAE   = 0.22;
+const PROB_CUBO_CAE = { facil: 0.10, normal: 0.18, dificil: 0.28 };
 const RETARDO_CUBO_CAE = 0.9;
 
 const _GEO_AVISO = new THREE.PlaneGeometry(1.8, 1.8);
@@ -77,15 +77,15 @@ export function alturaEn(ix, iz) {
   return Math.max(0, 11 - d);
 }
 
+const PASOS_TORRE = [
+  [3, 0], [3, 1], [2, 1], [1, 1], [1, 0], [1, -1], [2, -1],
+  [3, -1], [3, -2], [2, -2], [1, -2], [0, -2], [0, -1], [0, 0],
+];
+const NIVEL_PASO_TORRE = new Map(PASOS_TORRE.map(([ix, iz], i) => [`${ix},${iz}`, i + 1]));
+
 function alturaTorre(ix, iz) {
-  const d = Math.max(Math.abs(ix), Math.abs(iz));
-  if (d === 0) return 14;
-  if (d <= 1) return 11;
-  if (d <= 2) return 8;
-  if (d <= 3) return 5;
-  if (d <= 4) return 2;
-  if (d <= 5) return 1;
-  return 0;
+  if (Math.max(Math.abs(ix), Math.abs(iz)) > 5) return 0;
+  return NIVEL_PASO_TORRE.get(`${ix},${iz}`) ?? 1;
 }
 
 function alturaIslas(ix, iz) {
@@ -126,15 +126,30 @@ export function obtenerAlturaFn(tipo) {
 const NIVEL_INICIAL_PIRAMIDE = 4;
 const MAX_DYN_MINAS = 60;
 const ELEV_POR_TIPO = { piramide: 0, torre: 0, islas: 3 };
-const PROB_MINAS_ESTATICA = { facil: 0.05, normal: 0.10, dificil: 0.18 };
+const PROB_MINAS_ESTATICA = {
+  piramide: { facil: 0.015, normal: 0.03, dificil: 0.06 },
+  torre:    { facil: 0.03,   normal: 0.06, dificil: 0.12 },
+  islas:    { facil: 0.025,  normal: 0.05, dificil: 0.10 },
+};
 
-export function crearEstructura(escena, tipo = 'piramide', dificultad = 'normal') {
+export function crearEstructura(escena, tipo = 'piramide', dificultad = 'normal', celdasProtegidas = []) {
   _setMineTopColor(_C_MINA_A);
 
   const alturaFn = obtenerAlturaFn(tipo);
   const RANGO = tipo === 'islas' ? 16 : tipo === 'piramide' ? 10 : 5;
   const ELEVACION = ELEV_POR_TIPO[tipo] || 0;
+  const probMinas = PROB_MINAS_ESTATICA[tipo]?.[dificultad] ?? 0.03;
+  const probCuboCae = PROB_CUBO_CAE[dificultad] ?? PROB_CUBO_CAE.normal;
   let _nivelMaxVisible = 100;
+
+  function esProtegida(ix, iz) {
+    if (celdasProtegidas.some(([px, pz]) => ix === px && iz === pz)) return true;
+    if (ix === 0 && iz === 0) return true;
+    if (tipo === 'torre' && NIVEL_PASO_TORRE.has(`${ix},${iz}`)) return true;
+    if (tipo !== 'islas') return false;
+    if (iz === 0 && ((ix >= -9 && ix <= -6) || (ix >= 6 && ix <= 9))) return true;
+    return iz === 0 && (ix === -13 || ix === 13);
+  }
 
   /* -- Single pass: collect data and count -- */
   const cubeData = [];
@@ -149,7 +164,7 @@ export function crearEstructura(escena, tipo = 'piramide', dificultad = 'normal'
       for (let h = 0; h < hMax; h++) {
         const nivel  = h + 1;
         const esTapa = h === hMax - 1;
-        const esMina = esTapa && hMax > 1 && Math.random() < (PROB_MINAS_ESTATICA[dificultad] ?? 0.03);
+        const esMina = esTapa && hMax > 1 && !esProtegida(ix, iz) && Math.random() < probMinas;
         if (esBloqueado) nBloqueado++;
         else if (esMina) nMinas++; else nSeguro++;
         cubeData.push({
@@ -367,8 +382,9 @@ export function crearEstructura(escena, tipo = 'piramide', dificultad = 'normal'
     if (cubosCaidos.has(key) || pasosPendientes.has(key) || minasPos.has(key)) return false;
     const tapa = cubosTapa.get(key);
     if (!tapa || tapa.isMina || tapa.bloqueado) return false;
+    if (esProtegida(ix, iz)) return false;
     if (alturaFn(ix, iz) >= alturaFn(0, 0)) return false;
-    if (Math.random() >= PROB_CUBO_CAE) return false;
+    if (Math.random() >= probCuboCae) return false;
     pasosPendientes.set(key, { ix, iz, t: 0 });
     return true;
   }
@@ -390,7 +406,7 @@ export function crearEstructura(escena, tipo = 'piramide', dificultad = 'normal'
     const key = `${ix},${iz}`;
     if (minasPos.has(key) || avisos.has(key)) return false;
     const tapa = cubosTapa.get(key);
-    if (!tapa || tapa.isMina || tapa.bloqueado || alturaFn(ix, iz) > _nivelMaxVisible) return false;
+    if (!tapa || tapa.isMina || tapa.bloqueado || esProtegida(ix, iz) || alturaFn(ix, iz) > _nivelMaxVisible) return false;
 
     const h = alturaFn(ix, iz);
     const mesh = new THREE.Mesh(_GEO_AVISO, _MAT_AVISO_NARANJA);
@@ -402,9 +418,9 @@ export function crearEstructura(escena, tipo = 'piramide', dificultad = 'normal'
 
   function convertirEnMina(ix, iz) {
     const key = `${ix},${iz}`;
-    if (minasPos.has(key)) return;
+    if (minasPos.has(key)) return false;
     const tapa = cubosTapa.get(key);
-    if (!tapa || tapa.isMina || tapa.bloqueado || alturaFn(ix, iz) > _nivelMaxVisible) return;
+    if (!tapa || tapa.isMina || tapa.bloqueado || esProtegida(ix, iz) || alturaFn(ix, iz) > _nivelMaxVisible) return false;
 
     // Hide the seguro cube
     instSeguro.setMatrixAt(tapa.instIdx, _HIDDEN);
@@ -423,6 +439,7 @@ export function crearEstructura(escena, tipo = 'piramide', dificultad = 'normal'
 
     minasPos.add(key);
     // The outline at tapa.outlineIdx stays visible at the correct position
+    return true;
   }
 
   function eliminarCubo(ix, iz) {

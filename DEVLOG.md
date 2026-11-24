@@ -4,6 +4,35 @@ Historial de cambios y decisiones de desarrollo.
 
 ---
 
+## 2026-11-24
+
+### Torre e Islas: dificultad y modo de juego completos
+
+**Dificultad en los 3 escenarios**
+- Minas estáticas por escenario: Pirámide 1.5/3/6%, Torre 3/6/12% e Islas 2.5/5/10% (fácil/normal/difícil)
+- Cubos que caen en los 3 escenarios con probabilidad 10/18/28% según dificultad; antes solo existían en Pirámide con 22% fijo
+- Items por cuadrante: Pirámide 3/2/1 y Torre/Islas 6/5/4 según dificultad; antes era una constante
+- Spawn de items, tortugas y hierba limitado al área jugable (Pirámide 10, Torre 5, Islas 5), para no desperdiciar intentos en celdas vacías de Islas
+- Islas: los objetos respetan la elevación del escenario (antes quedaban enterrados) y se generan items en las islas laterales `(±13, 0)`
+- Celdas protegidas en los 3 escenarios: inicio, centro y cima; en Islas también los puentes y el centro de las islas laterales. Nunca reciben minas ni cubos que caen
+
+**Modo de juego en los 3 escenarios**
+- Carrera: sin minas dinámicas en ningún escenario; el agua que sube sigue siendo exclusiva de Pirámide
+- Rey de la cima: minas dinámicas con aviso naranja → rojo en los 3 escenarios (antes solo en Pirámide)
+- Torre e Islas: la saciedad para invocar la nube es 30 en Carrera y 40 en Rey
+- El intervalo y el cap de minas dinámicas por dificultad se aplican igual a los 3 escenarios
+
+### La Torre: escalera de caracol y trampolín recargable
+
+- La torre dejó de tener anillos de +3 niveles: ahora es una base de nivel 1 con una escalera de caracol de 14 pasos que sube de 1 en 1 hasta el centro `(0, 0)`
+- Salto máximo hacia arriba por escenario: 1 nivel en Pirámide y Torre, 2 en Islas. Bajar sigue sin límite
+- La escalera y el centro están protegidos: no reciben minas ni cubos que caen, para que siempre haya ruta a la cima
+- Dos trampolines en `(1, 2)` y `(2, -1)`: se cargan 2s y quedan activos 3s (ciclo de 5s), con color amarillo/gris y latido
+- Aterrizar en un trampolín activo da un salto potenciado de hasta 3 niveles: desde `(1, 2)` se salta al escalón 4 y desde `(2, -1)` al escalón 10
+- Inicio de la torre movido a `(3, 0)`, primer escalón de la escalera
+
+---
+
 ## 2026-11-23
 
 ### La Pirámide: lago, cámara fija y cubos inestables
@@ -138,3 +167,42 @@ Commit: `6c8a399`
 | Música de fondo | Media (rubro) |
 | Sonidos de juego (cuak, salto, recoger, mina) | Media |
 | Verificar colisiones en los 3 escenarios | Media |
+| Depredador que persigue (zorro) — ver "Ideas propuestas" | Media |
+
+---
+
+## Ideas propuestas (sin implementar)
+
+### 🦊 Depredador que persigue — zorro terrestre (idea elegida)
+
+Un enemigo **activo** que caza al pato, a diferencia de las minas (estáticas) y las
+tortugas (solo patrullan en eje X). Aporta presión para no quedarse quieto y planear la
+ruta.
+
+- **Comportamiento:** salta de cubo en cubo avanzando **una casilla hacia el pato** cada
+  ~1.1s (más lento que el salto del pato de 0.45s), con IA *greedy* de 4 direcciones:
+  elige el eje con mayor diferencia; si esa celda no es accesible, prueba el otro; si ambos
+  fallan, se queda.
+- **Justo/escapable:** respeta el terreno (huecos, minas, cubos caídos, `z<0` en pirámide,
+  salida y centro); aparece **lejos** del pato y solo empieza a cazar tras alcanzar un nivel
+  de gracia; al perder una vida se **reubica lejos**.
+- **Colisión:** si el zorro cae en la casilla del pato → se pierde una vida (reusa
+  `perderVida`).
+- **Dificultad (tabla a afinar):** Fácil → sin zorro · Normal → paso 1.1s, aparece nivel 3 ·
+  Difícil → paso 0.85s, aparece nivel 2.
+- **Implementación prevista:** módulo nuevo `js/motor/depredador.js` copiando el patrón de
+  `js/motor/obstaculos.js` (`configurar/poblar/animar/limpiar`), enganchado en `escena.js` en
+  los mismos puntos que las tortugas (creación, `reiniciar`, `respawnJugador`, loop `animate`,
+  `limpiar`). Reutiliza `puedeOcuparObstaculo`, el ctx de celda/salto y `yMundo/alturaFn`.
+  Malla low-poly con `flatShading` al estilo de la tortuga. Funciona en los 3 escenarios.
+- **Variantes descartadas:** halcón volador (ignora terreno, difícil de balancear) e híbrido
+  con salto largo telegrafiado.
+
+### Otras ideas de mecánica (lluvia de ideas)
+
+- **Power-ups (cubren el rubro de 3 objetos especiales):** 🪽 Pluma dorada (planeo/doble
+  salto), 🛟 Salvavidas (escudo de 1 golpe), 🍞 Migajas (imán de puntos), ❄️ Hielo (congela
+  agua/tortugas), ⏳ Reloj (tiempo lento).
+- **Peligros/terreno:** 🧊 cubos resbaladizos (deslizan 1 casilla extra), 🌀 viento que
+  empuja lateral, 🌀 cubos portal/teletransporte.
+- **Objetivos/modos:** 🥚 escolta de patito (protegerlo da bonus), 🌙 modo noche con linterna.
