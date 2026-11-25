@@ -1,52 +1,50 @@
 /**
- * Cliente multijugador (Socket.IO).
+ * Cliente multijugador (Socket.IO) — sistema de emparejamiento automático.
  *
  * El servidor expone el cliente en /socket.io/socket.io.js, que define el
- * global `io`. Se carga en index.html antes que este modulo.
+ * global `io`. Se carga en index.html antes que este módulo.
  */
 const socket = typeof window.io === 'function' ? window.io() : null;
 
 /**
- * Engancha los eventos de multijugador. `alEntrar` recibe { id, nombre },
- * `alMover` recibe { id, x, y, z } y `alSalir` recibe el id del jugador.
+ * Registra los callbacks de partida.
+ * - alEncontrarPartida({ sala, semilla, dificultad, oponente })
+ * - alMover({ id, x, y, z, rotationY })
+ * - alSalir(id)
+ * - alRivalEliminado(id)
  */
-export function iniciarMultijugador({ alEntrar, alMover, alSalir, alCambiarEscenario }) {
+export function iniciarMultijugador({ alEncontrarPartida, alMover, alSalir, alRivalEliminado } = {}) {
   if (!socket) {
-    console.error('Socket.IO no esta disponible: falta el cliente en index.html.');
+    console.error('Socket.IO no está disponible: falta el cliente en index.html.');
     return;
   }
 
-  socket.on('jugadores', (lista) => {
-    lista.forEach((jugador) => alEntrar(jugador));
+  socket.on('partida-encontrada', (data) => {
+    if (typeof alEncontrarPartida === 'function') alEncontrarPartida(data);
   });
-
-  socket.on('jugador-entro', (jugador) => alEntrar(jugador));
-  socket.on('jugador-movio', (jugador) => alMover(jugador));
-  socket.on('jugador-salio', (id) => alSalir(id));
-
-  socket.on('escenario-elegido', (data) => {
-    if (typeof alCambiarEscenario === 'function') alCambiarEscenario(data);
-  });
+  socket.on('jugador-movio',    (j)  => { if (typeof alMover === 'function')           alMover(j); });
+  socket.on('jugador-salio',    (id) => { if (typeof alSalir === 'function')            alSalir(id); });
+  socket.on('rival-eliminado',  (id) => { if (typeof alRivalEliminado === 'function')   alRivalEliminado(id); });
 }
 
-export function emitirEscenario(escenario, modo) {
-  if (socket) socket.emit('ElegirEscenario', { escenario, modo });
+/** Entra en la cola de emparejamiento. */
+export function buscarPartida(nombre, colorCuerpo, colorOjo, dificultad) {
+  if (socket) socket.emit('BuscarPartida', { nombre, colorCuerpo, colorOjo, dificultad });
 }
 
-/**
- * Registra al jugador en el servidor con su nombre.
- */
-export function conectarJugador(nombre) {
-  if (socket) {
-    socket.emit('Iniciar', nombre);
-  }
+/** Sale de la cola sin iniciar partida. */
+export function cancelarBusqueda() {
+  if (socket) socket.emit('CancelarBusqueda');
 }
 
-/**
- * Envia la posicion del jugador local al servidor.
- */
+/** Avisa al servidor que este jugador fue eliminado (vidas = 0 en batalla). */
+export function reportarEliminado() {
+  if (socket) socket.emit('BatallaEliminado');
+}
+
+/** Envía la posición del jugador local. */
 export function enviarPosicion(posicion) {
   if (socket) {
-    socket.emit('Posicion', { x: posicion.x, y: posicion.y, z: posicion.z });
+    socket.emit('Posicion', { x: posicion.x, y: posicion.y, z: posicion.z, rotationY: posicion.rotationY });
   }
 }
