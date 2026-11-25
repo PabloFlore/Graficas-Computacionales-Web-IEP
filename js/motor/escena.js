@@ -909,8 +909,6 @@ export async function iniciarEscena({ alMoverJugador, alGanar, alPerder } = {}) 
     saltoT = 0;
     sonidoSalto();
     iniciarMusica();
-
-    if (!cronometroActivo) cronometroActivo = true;
   });
 
   /* ---------- Reintentar (game over) y botones de victoria ---------- */
@@ -1264,7 +1262,7 @@ export async function iniciarEscena({ alMoverJugador, alGanar, alPerder } = {}) 
     score = 0;
     racha = 0;
     cronometroT = 0;
-    cronometroActivo = false;
+    cronometroActivo = true;
 
     aguaT = 0;
     nivelAgua = 0;
