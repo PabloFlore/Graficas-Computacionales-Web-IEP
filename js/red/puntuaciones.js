@@ -1,4 +1,11 @@
-const API_SCORES = '/api/scores';
+const API_PUNTUACIONES = 'http://localhost/api/puntuaciones.php';
+const API_GUARDAR = 'http://localhost/api/WebServices.php';
+
+export async function obtenerPuntuaciones() {
+  const res = await fetch(API_PUNTUACIONES);
+  if (!res.ok) throw new Error('Error al obtener datos');
+  return await res.json();
+}
 
 export async function cargarPuntuaciones() {
   const tbody = document.querySelector('#tabla-puntuaciones tbody');
@@ -7,9 +14,7 @@ export async function cargarPuntuaciones() {
   tbody.innerHTML = '<tr><td colspan="2" style="text-align:center;">Cargando...</td></tr>';
 
   try {
-    const res = await fetch(API_SCORES);
-    if (!res.ok) throw new Error('Error al obtener datos');
-    const scores = await res.json();
+    const scores = await obtenerPuntuaciones();
 
     tbody.innerHTML = '';
 
@@ -33,14 +38,11 @@ export async function cargarPuntuaciones() {
 }
 
 export async function enviarPuntuacion(nombre, puntos) {
-  const res = await fetch(API_SCORES, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ nombre, puntos: Number(puntos) }),
-  });
+  const params = new URLSearchParams({ nombre, score: String(puntos) });
+  const res = await fetch(`${API_GUARDAR}?${params}`, { method: 'POST' });
   if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.error || 'No se pudo guardar la puntuación.');
+    const texto = await res.text().catch(() => '');
+    throw new Error(texto || 'No se pudo guardar la puntuación.');
   }
   return true;
 }

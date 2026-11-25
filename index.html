@@ -71,6 +71,7 @@
           <li class="ranking-menu__cargando">Cargando...</li>
         </ol>
       </div>
+      <button class="ranking-menu__ver-mas" id="ranking-menu-ver-mas">Ver más</button>
     </div>
     <span class="marca__logo marca__logo--pie">UANL &nbsp;!&nbsp; LMAD &nbsp;!&nbsp; GRAFICAS COMPUTACIONALES EN WEB</span>
   </section>
@@ -219,7 +220,7 @@
           </div>
 
           <div class="hud__flotante">
-            <span class="hud__etiqueta">Hambre</span>
+            <span class="hud__etiqueta">Agua <span id="hud-agua-nivel">0</span>/11</span>
             <div class="saciedad__barra">
               <div class="saciedad__relleno" id="hud-saciedad-relleno"></div>
             </div>
@@ -411,6 +412,7 @@
       <h2 class="vista-titulo">Unirse a partida</h2>
       <p class="vista-subtitulo">Ingresa el código de la sala</p>
       <input class="input-codigo" type="text" id="codigo-unirse" placeholder="· · · · · ·" maxlength="6" autocomplete="off" spellcheck="false">
+      <input class="formulario__campo input-nombre-multi" type="text" id="nombre-unirse" placeholder="Tu nombre de jugador" autocomplete="off" maxlength="20">
       <button class="boton boton--continuar" id="boton-unirse">Unirse →</button>
       <div class="partidas-sep">— o —</div>
       <p class="campo__etiqueta" style="text-align:center;">Partidas detectadas</p>

@@ -40,18 +40,29 @@ const _TEX_BORDE = (() => {
 })();
 
 // Shared geometry — module-level, reused across reiniciar()
-const _GEO_SEGURO  = _crearGeoVC('#8fe0b8', '#e8a878', '#c9885a');
-const _GEO_MINA    = _crearGeoVC('#ff6b57', '#e8a878', '#c9885a');
-const _GEO_OUTLINE = new THREE.BoxGeometry(2.12, 2.12, 2.12);
+const _GEO_SEGURO   = _crearGeoVC('#8fe0b8', '#e8a878', '#c9885a');
+const _GEO_MINA     = _crearGeoVC('#ff6b57', '#e8a878', '#c9885a');
+const _GEO_BLOQUEADO = _crearGeoVC('#a97142', '#8b5a2b', '#6b4423');
+const _GEO_OUTLINE  = new THREE.BoxGeometry(2.12, 2.12, 2.12);
 const _MAT_VC      = new THREE.MeshBasicMaterial({ vertexColors: true, map: _TEX_BORDE });
 const _MAT_OUTLINE = new THREE.MeshBasicMaterial({ color: 0x1f2430, side: THREE.BackSide });
 
 const _HIDDEN = new THREE.Matrix4().makeScale(0, 0, 0);
 const _M4     = new THREE.Matrix4();
 
-// Mine blink: only the top face (+Y) = vertices 8–11 in _GEO_MINA
+// Top de mina: rojo fijo (sin parpadeo)
 const _C_MINA_A = new THREE.Color('#ff6b57');
-const _C_MINA_B = new THREE.Color('#ff9d3d');
+
+const AVISO_NARANJA = 1.1;
+const AVISO_ROJO    = 1.0;
+
+const PROB_CUBO_CAE = { facil: 0.10, normal: 0.18, dificil: 0.28 };
+const RETARDO_CUBO_CAE = 0.9;
+
+const _GEO_AVISO = new THREE.PlaneGeometry(1.8, 1.8);
+_GEO_AVISO.rotateX(-Math.PI / 2);
+const _MAT_AVISO_NARANJA = new THREE.MeshBasicMaterial({ color: 0xff9d3d, side: THREE.DoubleSide, depthWrite: false });
+const _MAT_AVISO_ROJO    = new THREE.MeshBasicMaterial({ color: 0xff3b30, side: THREE.DoubleSide, depthWrite: false });
 
 function _setMineTopColor(c) {
   const attr = _GEO_MINA.attributes.color;
@@ -66,15 +77,15 @@ export function alturaEn(ix, iz) {
   return Math.max(0, 11 - d);
 }
 
+const PASOS_TORRE = [
+  [3, 0], [3, 1], [2, 1], [1, 1], [1, 0], [1, -1], [2, -1],
+  [3, -1], [3, -2], [2, -2], [1, -2], [0, -2], [0, -1], [0, 0],
+];
+const NIVEL_PASO_TORRE = new Map(PASOS_TORRE.map(([ix, iz], i) => [`${ix},${iz}`, i + 1]));
+
 function alturaTorre(ix, iz) {
-  const d = Math.max(Math.abs(ix), Math.abs(iz));
-  if (d === 0) return 14;
-  if (d <= 1) return 11;
-  if (d <= 2) return 8;
-  if (d <= 3) return 5;
-  if (d <= 4) return 2;
-  if (d <= 5) return 1;
-  return 0;
+  if (Math.max(Math.abs(ix), Math.abs(iz)) > 5) return 0;
+  return NIVEL_PASO_TORRE.get(`${ix},${iz}`) ?? 1;
 }
 
 function alturaIslas(ix, iz) {
@@ -115,32 +126,49 @@ export function obtenerAlturaFn(tipo) {
 const NIVEL_INICIAL_PIRAMIDE = 4;
 const MAX_DYN_MINAS = 60;
 const ELEV_POR_TIPO = { piramide: 0, torre: 0, islas: 3 };
-const PROB_MINAS_ESTATICA = { facil: 0.05, normal: 0.10, dificil: 0.18 };
+const PROB_MINAS_ESTATICA = {
+  piramide: { facil: 0.015, normal: 0.03, dificil: 0.06 },
+  torre:    { facil: 0.03,   normal: 0.06, dificil: 0.12 },
+  islas:    { facil: 0.025,  normal: 0.05, dificil: 0.10 },
+};
 
-export function crearEstructura(escena, tipo = 'piramide', dificultad = 'normal') {
+export function crearEstructura(escena, tipo = 'piramide', dificultad = 'normal', celdasProtegidas = []) {
   _setMineTopColor(_C_MINA_A);
 
   const alturaFn = obtenerAlturaFn(tipo);
   const RANGO = tipo === 'islas' ? 16 : tipo === 'piramide' ? 10 : 5;
   const ELEVACION = ELEV_POR_TIPO[tipo] || 0;
+  const probMinas = PROB_MINAS_ESTATICA[tipo]?.[dificultad] ?? 0.03;
+  const probCuboCae = PROB_CUBO_CAE[dificultad] ?? PROB_CUBO_CAE.normal;
   let _nivelMaxVisible = 100;
+
+  function esProtegida(ix, iz) {
+    if (celdasProtegidas.some(([px, pz]) => ix === px && iz === pz)) return true;
+    if (ix === 0 && iz === 0) return true;
+    if (tipo === 'torre' && NIVEL_PASO_TORRE.has(`${ix},${iz}`)) return true;
+    if (tipo !== 'islas') return false;
+    if (iz === 0 && ((ix >= -9 && ix <= -6) || (ix >= 6 && ix <= 9))) return true;
+    return iz === 0 && (ix === -13 || ix === 13);
+  }
 
   /* -- Single pass: collect data and count -- */
   const cubeData = [];
-  let nSeguro = 0, nMinas = 0;
+  let nSeguro = 0, nMinas = 0, nBloqueado = 0;
 
   for (let ix = -RANGO; ix <= RANGO; ix++) {
     for (let iz = -RANGO; iz <= RANGO; iz++) {
       const hMax = alturaFn(ix, iz);
       if (hMax <= 0) continue;
       const key = `${ix},${iz}`;
+      const esBloqueado = tipo === 'piramide' && iz < 0;
       for (let h = 0; h < hMax; h++) {
         const nivel  = h + 1;
         const esTapa = h === hMax - 1;
-        const esMina = esTapa && hMax > 1 && Math.random() < (PROB_MINAS_ESTATICA[dificultad] ?? 0.03);
-        if (esMina) nMinas++; else nSeguro++;
+        const esMina = esTapa && hMax > 1 && !esProtegida(ix, iz) && Math.random() < probMinas;
+        if (esBloqueado) nBloqueado++;
+        else if (esMina) nMinas++; else nSeguro++;
         cubeData.push({
-          key, nivel, esTapa, esMina,
+          key, nivel, esTapa, esMina, esBloqueado,
           wx: ix * 2, wz: iz * 2,
           targetY: h * 2 + 1 + ELEVACION * 2,
           oculto: nivel > _nivelMaxVisible,
@@ -152,21 +180,25 @@ export function crearEstructura(escena, tipo = 'piramide', dificultad = 'normal'
   const nTotal = cubeData.length;
 
   /* -- InstancedMesh: 3 draw calls for the entire structure -- */
-  const instSeguro  = new THREE.InstancedMesh(_GEO_SEGURO,  _MAT_VC,      nSeguro || 1);
+  const instSeguro   = new THREE.InstancedMesh(_GEO_SEGURO,   _MAT_VC,      nSeguro    || 1);
   // Extra slots at the end for dynamic mine conversions
-  const instMinas   = new THREE.InstancedMesh(_GEO_MINA,    _MAT_VC,      (nMinas || 1) + MAX_DYN_MINAS);
-  const instOutline = new THREE.InstancedMesh(_GEO_OUTLINE, _MAT_OUTLINE, nTotal  || 1);
+  const instMinas    = new THREE.InstancedMesh(_GEO_MINA,     _MAT_VC,      (nMinas || 1) + MAX_DYN_MINAS);
+  const instBloqueado = new THREE.InstancedMesh(_GEO_BLOQUEADO, _MAT_VC,    nBloqueado || 1);
+  const instOutline  = new THREE.InstancedMesh(_GEO_OUTLINE,  _MAT_OUTLINE, nTotal     || 1);
 
   instSeguro.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   instMinas.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  instBloqueado.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   instOutline.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 
-  instSeguro.count  = nSeguro;
-  instMinas.count   = nMinas;
-  instOutline.count = nTotal;
+  instSeguro.count   = nSeguro;
+  instMinas.count    = nMinas;
+  instBloqueado.count = nBloqueado;
+  instOutline.count  = nTotal;
 
   escena.add(instSeguro);
   escena.add(instMinas);
+  escena.add(instBloqueado);
   escena.add(instOutline);
 
   /* -- Tracking -- */
@@ -175,18 +207,33 @@ export function crearEstructura(escena, tipo = 'piramide', dificultad = 'normal'
   const minasPos       = new Set(); // "ix,iz"
   const minasOcultas   = new Map(); // "ix,iz" → {mIdx, outlineIdx}
   const cubosTapa      = new Map(); // "ix,iz" → {instIdx, outlineIdx, isMina}
-  const minasActiveIdx = [];        // mIdx values of active mines (for blinking)
+  const minasActiveIdx = [];        // mIdx values of active mines
+  const avisos         = new Map(); // "ix,iz" → {ix, iz, mesh, t, fase}
+  const pasosPendientes = new Map(); // "ix,iz" → {ix, iz, t}
+  const cubosCayendo    = [];        // cubos que se desprenden al pisarlos
+  const cubosCaidos     = new Set(); // "ix,iz" ya desaparecidos
 
   for (let n = 1; n <= 14; n++) cubosPorNivel.set(n, []);
 
-  let sIdx = 0, mIdx = 0, oIdx = 0;
+  let sIdx = 0, mIdx = 0, bIdx = 0, oIdx = 0;
 
   for (const c of cubeData) {
-    const { key, nivel, esTapa, esMina, wx, wz, targetY, oculto } = c;
+    const { key, nivel, esTapa, esMina, esBloqueado, wx, wz, targetY, oculto } = c;
     const outlineIdx = oIdx++;
     let instIdx;
 
-    if (esMina) {
+    if (esBloqueado) {
+      instIdx = bIdx++;
+      if (oculto) {
+        instBloqueado.setMatrixAt(instIdx, _HIDDEN);
+        instOutline.setMatrixAt(outlineIdx, _HIDDEN);
+      } else {
+        _M4.makeTranslation(wx, targetY, wz);
+        instBloqueado.setMatrixAt(instIdx, _M4);
+        instOutline.setMatrixAt(outlineIdx, _M4);
+        if (esMina) minasPos.add(key);
+      }
+    } else if (esMina) {
       instIdx = mIdx++;
       if (oculto) {
         instMinas.setMatrixAt(instIdx, _HIDDEN);
@@ -211,13 +258,14 @@ export function crearEstructura(escena, tipo = 'piramide', dificultad = 'normal'
       }
     }
 
-    cubosPorNivel.get(nivel)?.push({ instIdx, outlineIdx, isMina: esMina, wx, wz, targetY });
-    if (esTapa) cubosTapa.set(key, { instIdx, outlineIdx, isMina: esMina });
+    cubosPorNivel.get(nivel)?.push({ instIdx, outlineIdx, isMina: esMina, bloqueado: esBloqueado, wx, wz, targetY });
+    if (esTapa) cubosTapa.set(key, { instIdx, outlineIdx, isMina: esMina, bloqueado: esBloqueado });
   }
 
-  instSeguro.instanceMatrix.needsUpdate  = true;
-  instMinas.instanceMatrix.needsUpdate   = true;
-  instOutline.instanceMatrix.needsUpdate = true;
+  instSeguro.instanceMatrix.needsUpdate   = true;
+  instMinas.instanceMatrix.needsUpdate    = true;
+  instBloqueado.instanceMatrix.needsUpdate = true;
+  instOutline.instanceMatrix.needsUpdate  = true;
 
   /* -------- Revelar nivel -------- */
   function revelarNivel(n) {
@@ -227,14 +275,15 @@ export function crearEstructura(escena, tipo = 'piramide', dificultad = 'normal'
     (cubosPorNivel.get(n) || []).forEach((entry, i) => {
       const startY = entry.targetY + 10 + Math.random() * 3;
       _M4.makeTranslation(entry.wx, startY, entry.wz);
-      if (entry.isMina) instMinas.setMatrixAt(entry.instIdx, _M4);
-      else              instSeguro.setMatrixAt(entry.instIdx, _M4);
+      const mesh = entry.bloqueado ? instBloqueado : entry.isMina ? instMinas : instSeguro;
+      mesh.setMatrixAt(entry.instIdx, _M4);
       instOutline.setMatrixAt(entry.outlineIdx, _M4);
       cubosEnCaida.push({ ...entry, currentY: startY, delay: i * 0.003 });
     });
-    instSeguro.instanceMatrix.needsUpdate  = true;
-    instMinas.instanceMatrix.needsUpdate   = true;
-    instOutline.instanceMatrix.needsUpdate = true;
+    instSeguro.instanceMatrix.needsUpdate   = true;
+    instMinas.instanceMatrix.needsUpdate    = true;
+    instBloqueado.instanceMatrix.needsUpdate = true;
+    instOutline.instanceMatrix.needsUpdate  = true;
 
     const toActivate = [];
     minasOcultas.forEach(({ mIdx: mi }, key) => {
@@ -249,17 +298,49 @@ export function crearEstructura(escena, tipo = 'piramide', dificultad = 'normal'
   }
 
   /* -------- Animación -------- */
-  let minaT = 0;
-  let minaVisible = true;
-
   function animarMinas(delta) {
-    // Parpadeo: solo cambia los 4 vértices del tope en _GEO_MINA
-    if (minasActiveIdx.length > 0) {
-      minaT += delta;
-      if (minaT >= 0.4) {
-        minaT = 0;
-        minaVisible = !minaVisible;
-        _setMineTopColor(minaVisible ? _C_MINA_A : _C_MINA_B);
+    // Aviso naranja → rojo → mina activa (sin parpadeo)
+    for (const [key, av] of avisos) {
+      av.t += delta;
+      if (av.fase === 0 && av.t >= AVISO_NARANJA) {
+        av.fase = 1;
+        av.mesh.material = _MAT_AVISO_ROJO;
+      }
+      if (av.t >= AVISO_NARANJA + AVISO_ROJO) {
+        escena.remove(av.mesh);
+        avisos.delete(key);
+        convertirEnMina(av.ix, av.iz);
+      }
+    }
+
+    // Cubos que se desprenden después de ser pisados
+    for (const [key, paso] of pasosPendientes) {
+      paso.t += delta;
+      if (paso.t >= RETARDO_CUBO_CAE) {
+        pasosPendientes.delete(key);
+        desprenderCubo(paso.ix, paso.iz);
+      }
+    }
+
+    if (cubosCayendo.length > 0) {
+      let moved = false;
+      for (let i = cubosCayendo.length - 1; i >= 0; i--) {
+        const c = cubosCayendo[i];
+        c.y -= 12 * delta;
+        _M4.makeRotationY((c.y0 - c.y) * 0.18);
+        _M4.setPosition(c.wx, c.y, c.wz);
+        instSeguro.setMatrixAt(c.instIdx, _M4);
+        instOutline.setMatrixAt(c.outlineIdx, _M4);
+        moved = true;
+        if (c.y < -30) {
+          instSeguro.setMatrixAt(c.instIdx, _HIDDEN);
+          instOutline.setMatrixAt(c.outlineIdx, _HIDDEN);
+          cubosCayendo.splice(i, 1);
+        }
+      }
+      if (moved) {
+        instSeguro.instanceMatrix.needsUpdate  = true;
+        instOutline.instanceMatrix.needsUpdate = true;
       }
     }
 
@@ -272,16 +353,17 @@ export function crearEstructura(escena, tipo = 'piramide', dificultad = 'normal'
         if (f.delay > 0) continue;
         f.currentY = Math.max(f.targetY, f.currentY - 12 * delta);
         _M4.makeTranslation(f.wx, f.currentY, f.wz);
-        if (f.isMina) instMinas.setMatrixAt(f.instIdx, _M4);
-        else          instSeguro.setMatrixAt(f.instIdx, _M4);
+        const mesh = f.bloqueado ? instBloqueado : f.isMina ? instMinas : instSeguro;
+        mesh.setMatrixAt(f.instIdx, _M4);
         instOutline.setMatrixAt(f.outlineIdx, _M4);
         moved = true;
         if (f.currentY <= f.targetY) cubosEnCaida.splice(i, 1);
       }
       if (moved) {
-        instSeguro.instanceMatrix.needsUpdate  = true;
-        instMinas.instanceMatrix.needsUpdate   = true;
-        instOutline.instanceMatrix.needsUpdate = true;
+        instSeguro.instanceMatrix.needsUpdate   = true;
+        instMinas.instanceMatrix.needsUpdate    = true;
+        instBloqueado.instanceMatrix.needsUpdate = true;
+        instOutline.instanceMatrix.needsUpdate  = true;
       }
     }
   }
@@ -291,11 +373,54 @@ export function crearEstructura(escena, tipo = 'piramide', dificultad = 'normal'
     return minasPos.has(`${ix},${iz}`);
   }
 
+  function estaCaido(ix, iz) {
+    return cubosCaidos.has(`${ix},${iz}`);
+  }
+
+  function registrarPaso(ix, iz) {
+    const key = `${ix},${iz}`;
+    if (cubosCaidos.has(key) || pasosPendientes.has(key) || minasPos.has(key)) return false;
+    const tapa = cubosTapa.get(key);
+    if (!tapa || tapa.isMina || tapa.bloqueado) return false;
+    if (esProtegida(ix, iz)) return false;
+    if (alturaFn(ix, iz) >= alturaFn(0, 0)) return false;
+    if (Math.random() >= probCuboCae) return false;
+    pasosPendientes.set(key, { ix, iz, t: 0 });
+    return true;
+  }
+
+  function desprenderCubo(ix, iz) {
+    const key = `${ix},${iz}`;
+    const tapa = cubosTapa.get(key);
+    if (!tapa || tapa.isMina || tapa.bloqueado || cubosCaidos.has(key)) return;
+
+    const y0 = alturaFn(ix, iz) * 2 - 1 + ELEVACION * 2;
+    cubosCayendo.push({ instIdx: tapa.instIdx, outlineIdx: tapa.outlineIdx, wx: ix * 2, wz: iz * 2, y: y0, y0 });
+    cubosCaidos.add(key);
+    cubosTapa.delete(key);
+    instSeguro.instanceMatrix.needsUpdate  = true;
+    instOutline.instanceMatrix.needsUpdate = true;
+  }
+
+  function avisarMina(ix, iz) {
+    const key = `${ix},${iz}`;
+    if (minasPos.has(key) || avisos.has(key)) return false;
+    const tapa = cubosTapa.get(key);
+    if (!tapa || tapa.isMina || tapa.bloqueado || esProtegida(ix, iz) || alturaFn(ix, iz) > _nivelMaxVisible) return false;
+
+    const h = alturaFn(ix, iz);
+    const mesh = new THREE.Mesh(_GEO_AVISO, _MAT_AVISO_NARANJA);
+    mesh.position.set(ix * 2, h * 2 + ELEVACION * 2 + 0.06, iz * 2);
+    escena.add(mesh);
+    avisos.set(key, { ix, iz, mesh, t: 0, fase: 0 });
+    return true;
+  }
+
   function convertirEnMina(ix, iz) {
     const key = `${ix},${iz}`;
-    if (minasPos.has(key)) return;
+    if (minasPos.has(key)) return false;
     const tapa = cubosTapa.get(key);
-    if (!tapa || tapa.isMina || alturaFn(ix, iz) > _nivelMaxVisible) return;
+    if (!tapa || tapa.isMina || tapa.bloqueado || esProtegida(ix, iz) || alturaFn(ix, iz) > _nivelMaxVisible) return false;
 
     // Hide the seguro cube
     instSeguro.setMatrixAt(tapa.instIdx, _HIDDEN);
@@ -314,6 +439,7 @@ export function crearEstructura(escena, tipo = 'piramide', dificultad = 'normal'
 
     minasPos.add(key);
     // The outline at tapa.outlineIdx stays visible at the correct position
+    return true;
   }
 
   function eliminarCubo(ix, iz) {
@@ -321,15 +447,20 @@ export function crearEstructura(escena, tipo = 'piramide', dificultad = 'normal'
     const tapa = cubosTapa.get(key);
     if (!tapa) return;
 
+    const av = avisos.get(key);
+    if (av) {
+      escena.remove(av.mesh);
+      avisos.delete(key);
+    }
+
+    const mesh = tapa.bloqueado ? instBloqueado : tapa.isMina ? instMinas : instSeguro;
+    mesh.setMatrixAt(tapa.instIdx, _HIDDEN);
+    mesh.instanceMatrix.needsUpdate = true;
+
     if (tapa.isMina) {
-      instMinas.setMatrixAt(tapa.instIdx, _HIDDEN);
-      instMinas.instanceMatrix.needsUpdate = true;
       minasPos.delete(key);
       const ai = minasActiveIdx.indexOf(tapa.instIdx);
       if (ai !== -1) minasActiveIdx.splice(ai, 1);
-    } else {
-      instSeguro.setMatrixAt(tapa.instIdx, _HIDDEN);
-      instSeguro.instanceMatrix.needsUpdate = true;
     }
     instOutline.setMatrixAt(tapa.outlineIdx, _HIDDEN);
     instOutline.instanceMatrix.needsUpdate = true;
@@ -339,21 +470,31 @@ export function crearEstructura(escena, tipo = 'piramide', dificultad = 'normal'
   function limpiar() {
     escena.remove(instSeguro);
     escena.remove(instMinas);
+    escena.remove(instBloqueado);
     escena.remove(instOutline);
     instSeguro.dispose();
     instMinas.dispose();
+    instBloqueado.dispose();
     instOutline.dispose();
     cubosEnCaida.length = 0;
     minasPos.clear();
     minasOcultas.clear();
     cubosTapa.clear();
     minasActiveIdx.length = 0;
+    avisos.forEach((av) => escena.remove(av.mesh));
+    avisos.clear();
+    pasosPendientes.clear();
+    cubosCayendo.length = 0;
+    cubosCaidos.clear();
   }
 
   return {
     alturaFn,
     animarMinas,
     esMina,
+    estaCaido,
+    registrarPaso,
+    avisarMina,
     convertirEnMina,
     eliminarCubo,
     limpiar,
@@ -361,6 +502,7 @@ export function crearEstructura(escena, tipo = 'piramide', dificultad = 'normal'
     elevacion: ELEVACION,
     get nivelMaxVisible() { return _nivelMaxVisible; },
     get minasCount()      { return minasPos.size; },
+    get minasPendientes() { return avisos.size; },
     get tapasCount()      { return cubosTapa.size; },
   };
 }

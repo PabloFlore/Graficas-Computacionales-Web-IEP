@@ -4,17 +4,20 @@ import { iniciarFormulario } from './red/formulario.js';
 import { iniciarMultijugador, conectarJugador, enviarPosicion, emitirEscenario } from './red/multijugador.js';
 import { iniciarSelectorPatos } from './motor/selector-patos.js';
 import { iniciarPatoMenu } from './motor/pato-menu.js';
-import { cargarPuntuaciones, enviarPuntuacion } from './red/puntuaciones.js';
+import { cargarPuntuaciones, enviarPuntuacion, obtenerPuntuaciones } from './red/puntuaciones.js';
 import { iniciarPreviewsEscenario } from './motor/previews-escenario.js';
 
 let escenarioPendiente = 'piramide';
 let modoPendiente = 'carrera';
 let dificultadPendiente = 'normal';
+let jugadorRegistrado = false;
+let ignorarEscenarioPropio = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
   iniciarNavegacion();
   iniciarFormulario();
   iniciarPatoMenu();
+  engancharRankingVerMas();
   cargarRankingMenu();
   iniciarPreviewsEscenario();
 
@@ -28,13 +31,29 @@ document.addEventListener('DOMContentLoaded', async () => {
   const selectorPatos = iniciarSelectorPatos();
 
   iniciarMultijugador({
-    alEntrar: (jugador) => escena.agregarJugadorRemoto(jugador),
-    alMover:  (jugador) => escena.moverJugadorRemoto(jugador),
-    alSalir:  (id)      => escena.quitarJugadorRemoto(id),
-    alCambiarEscenario: ({ escenario }) => escena.reiniciar(escenario),
+    alEntrar: (jugador) => {
+      escena.agregarJugadorRemoto(jugador);
+      agregarJugadorSala(jugador);
+    },
+    alMover: (jugador) => escena.moverJugadorRemoto(jugador),
+    alSalir: (id) => {
+      escena.quitarJugadorRemoto(id);
+      quitarJugadorSala(id);
+    },
+    alCambiarEscenario: (data) => {
+      if (ignorarEscenarioPropio) {
+        ignorarEscenarioPropio = false;
+        return;
+      }
+      const info = typeof data === 'string' ? { escenario: data } : (data || {});
+      const escenario = info.escenario || escenarioPendiente;
+      modoPendiente = info.modo || modoPendiente || 'carrera';
+      const cfg = selectorPatos.getPatolSeleccionado();
+      escena.reiniciar(escenario, cfg.colorCuerpo, cfg.colorOjo, dificultadPendiente ?? 'normal', modoPendiente);
+    },
   });
 
-  engancharConexion();
+  engancharMultijugador();
   engancharSeleccion(escena);
   engancharColores(escena, selectorPatos);
   engancharPausa(escena);
@@ -45,10 +64,10 @@ async function cargarRankingMenu() {
   const lista = document.getElementById('ranking-menu-lista');
   if (!lista) return;
   try {
-    const res = await fetch('/api/scores');
-    const scores = await res.json();
+    const scores = await obtenerPuntuaciones();
     if (scores.length === 0) {
       lista.innerHTML = '<li class="ranking-menu__cargando">Sin puntuaciones aún</li>';
+      actualizarBotonVerMas(0);
       return;
     }
     lista.innerHTML = scores
@@ -58,20 +77,76 @@ async function cargarRankingMenu() {
         <span class="ranking__pts">${s.puntos}</span>
       </li>`)
       .join('');
+    actualizarBotonVerMas(scores.length);
   } catch {
     lista.innerHTML = '<li class="ranking-menu__cargando">No disponible</li>';
+    actualizarBotonVerMas(0);
   }
 }
 
-function engancharConexion() {
-  const boton = document.getElementById('boton-conectar');
-  const campo = document.getElementById('nombre-jugador');
-  if (!boton || !campo) return;
-
+function engancharRankingVerMas() {
+  const boton = document.getElementById('ranking-menu-ver-mas');
+  const lista = document.getElementById('ranking-menu-lista');
+  if (!boton || !lista) return;
   boton.addEventListener('click', () => {
-    const nombre = campo.value.trim();
-    if (nombre) conectarJugador(nombre);
+    const expandida = lista.classList.toggle('ranking-menu__lista--expandida');
+    boton.textContent = expandida ? 'Ver menos' : 'Ver más';
   });
+}
+
+function actualizarBotonVerMas(cantidad) {
+  const boton = document.getElementById('ranking-menu-ver-mas');
+  const lista = document.getElementById('ranking-menu-lista');
+  if (!boton || !lista) return;
+  lista.classList.remove('ranking-menu__lista--expandida');
+  boton.textContent = 'Ver más';
+  boton.classList.toggle('ranking-menu__ver-mas--visible', cantidad > 5);
+}
+
+function engancharMultijugador() {
+  document.getElementById('boton-crear-sala')?.addEventListener('click', () => registrarEnSala('nombre-multi'));
+  document.getElementById('boton-unirse')?.addEventListener('click', () => registrarEnSala('nombre-unirse'));
+
+  document.getElementById('boton-iniciar-multi')?.addEventListener('click', () => {
+    emitirEscenario(escenarioPendiente, modoPendiente);
+    mostrarVista('vista-juego');
+  });
+}
+
+function registrarEnSala(idCampo) {
+  const campo = document.getElementById(idCampo);
+  const nombre = campo?.value.trim();
+  if (!nombre) {
+    campo?.classList.add('campo--error');
+    campo?.focus();
+    campo?.addEventListener('input', () => campo.classList.remove('campo--error'), { once: true });
+    return;
+  }
+
+  if (!jugadorRegistrado) {
+    ignorarEscenarioPropio = true;
+    setTimeout(() => { ignorarEscenarioPropio = false; }, 3000);
+    conectarJugador(nombre);
+    jugadorRegistrado = true;
+  }
+
+  const anfitrion = document.querySelector('#sala-jugadores-lista .sala-jugador--anfitrion');
+  if (anfitrion) anfitrion.textContent = `Tú (${nombre})`;
+  mostrarVista('vista-sala-espera');
+}
+
+function agregarJugadorSala(jugador) {
+  const lista = document.getElementById('sala-jugadores-lista');
+  if (!lista || lista.querySelector(`[data-id="${jugador.id}"]`)) return;
+  const li = document.createElement('li');
+  li.className = 'sala-jugador';
+  li.dataset.id = jugador.id;
+  li.textContent = jugador.nombre;
+  lista.appendChild(li);
+}
+
+function quitarJugadorSala(id) {
+  document.querySelector(`#sala-jugadores-lista [data-id="${id}"]`)?.remove();
 }
 
 function engancharSeleccion(escena) {
@@ -137,7 +212,9 @@ function engancharColores(escena, selectorPatos) {
     }
 
     const cfg = selectorPatos.getPatolSeleccionado();
-    escena.reiniciar(escenarioPendiente, cfg.colorCuerpo, cfg.colorOjo, dificultadPendiente ?? 'normal');
+    escena.reiniciar(escenarioPendiente, cfg.colorCuerpo, cfg.colorOjo, dificultadPendiente ?? 'normal', modoPendiente ?? 'carrera');
+    ignorarEscenarioPropio = true;
+    setTimeout(() => { ignorarEscenarioPropio = false; }, 1000);
     emitirEscenario(escenarioPendiente, modoPendiente);
     mostrarVista('vista-juego');
   });

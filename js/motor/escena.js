@@ -3,12 +3,23 @@ import { crearEstructura } from './piramide.js';
 import { crearPato } from './pato.js';
 import { crearExplosion } from './explosion.js';
 import { crearSistemaColeccionables } from './coleccionables.js';
+import { crearSistemaObstaculos } from './obstaculos.js';
 
 const INICIO_POR_ESCENARIO = {
   piramide: { x: 0, z: 10 },
-  torre:    { x: 5, z: 0 },
+  torre:    { x: 3, z: 0 },
   islas:    { x: -10, z: 4 },
 };
+
+const TRAMPOLINES_TORRE = [[1, 2], [2, -1]];
+const TRAMPOLIN_CICLO = 5;
+const TRAMPOLIN_ACTIVO = 3;
+
+const CELDAS_PROTEGIDAS = [
+  ...Object.values(INICIO_POR_ESCENARIO).map(({ x, z }) => [x, z]),
+  [0, 0],
+  ...TRAMPOLINES_TORRE,
+];
 
 const FONDO_POR_ESCENARIO = {
   piramide: '#6cc0f0',
@@ -23,11 +34,21 @@ const RANGO_POR_ESCENARIO = {
 };
 
 const NIVEL_MAXIMO_POR_ESCENARIO = { piramide: 11, torre: 14, islas: 11 };
+const MAX_SUBIDA_POR_ESCENARIO   = { piramide: 1, torre: 1, islas: 2 };
+const RANGO_SPAWN_POR_ESCENARIO  = { piramide: 10, torre: 5, islas: 5 };
+
+const ITEMS_POR_CUADRANTE = {
+  piramide: { facil: 3, normal: 2, dificil: 1 },
+  torre:    { facil: 6, normal: 5, dificil: 4 },
+  islas:    { facil: 6, normal: 5, dificil: 4 },
+};
+const ISLAS_LATERALES = [[-13, 0], [13, 0]];
 
 const INTERVALO_MINAS  = { facil: 2.0, normal: 1.2, dificil: 0.6 };
 const CAP_MINAS_PCT    = { facil: 0.25, normal: 0.45, dificil: 0.65 };
 const INTERVALO_ITEMS          = 1.5;
-const MIN_ITEMS_POR_CUADRANTE  = 5;
+const INTERVALO_AGUA           = { carrera: 9, rey: 6 };
+const BAJADA_AGUA_MUERTE       = 3;
 const CUADRANTES = [[1,1],[-1,1],[-1,-1],[1,-1]];
 
 function lerp(a, b, t) { return a + (b - a) * t; }
@@ -50,7 +71,7 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
   scene.add(sol);
 
   /* ---------- Estructura inicial ---------- */
-  let estructura = crearEstructura(scene, 'piramide');
+  let estructura = crearEstructura(scene, 'piramide', 'normal', CELDAS_PROTEGIDAS);
   let alturaFn = estructura.alturaFn;
   let escenarioActual = 'piramide';
   let elevacion = estructura.elevacion || 0;
@@ -86,12 +107,19 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
   let dificultadActual = 'normal';
 
   /* ---------- Saciedad ---------- */
-  const SACIEDAD_MAX = 30;
+  const SACIEDAD_MAX_POR_MODO = { carrera: 30, rey: 40 };
+  let saciedadMax = SACIEDAD_MAX_POR_MODO.carrera;
   let saciedad      = 0;
   let satisfecho    = false;
   let nubeCima      = null;
   let nubeCimaBaseY = 0;
   let nubeCimaT     = 0;
+
+  /* ---------- Lago (solo pirámide) ---------- */
+  let aguaT      = 0;
+  let nivelAgua  = 0;
+  let planoAgua  = null;
+  let modoActual = 'carrera';
 
   /* ---------- Jugador (grupo) ---------- */
   const jugador = new THREE.Group();
@@ -123,12 +151,42 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
   const ALTURA_ARCO = 2.4;
   let saltoDesde = { x: 0, y: 0, z: 0 };
   let saltoHasta = { x: 0, y: 0, z: 0 };
+  let duracionSaltoActual = DURACION_SALTO;
+  let saltoLentoPendiente = false;
+  let alturaSaltoDesde = 0;
+  let impulsoSalto = 0;
 
   /* ---------- Explosión actual ---------- */
   let explosionActual = null;
 
   /* ---------- Coleccionables ---------- */
-  let coleccionables = crearSistemaColeccionables(scene, alturaFn, RANGO_POR_ESCENARIO[escenarioActual]);
+  let coleccionables = crearSistemaColeccionables(
+    scene,
+    alturaFn,
+    RANGO_SPAWN_POR_ESCENARIO[escenarioActual],
+    (ix, iz) => yMundo(ix, iz)
+  );
+
+  /* ---------- Obstáculos: tortugas y hierba ---------- */
+  function puedeOcuparObstaculo(ix, iz) {
+    if (alturaFn(ix, iz) <= 0) return false;
+    if (escenarioActual === 'piramide' && iz < 0) return false;
+    const inicio = INICIO_POR_ESCENARIO[escenarioActual];
+    if (inicio && ix === inicio.x && iz === inicio.z) return false;
+    if (ix === 0 && iz === 0) return false;
+    if (escenarioActual === 'torre' && TRAMPOLINES_TORRE.some(([tx, tz]) => tx === ix && tz === iz)) return false;
+    if (estructura.esMina(ix, iz) || estructura.estaCaido(ix, iz)) return false;
+    if (coleccionables.tieneItem(ix, iz)) return false;
+    return true;
+  }
+
+  let obstaculos = crearSistemaObstaculos(
+    scene,
+    alturaFn,
+    RANGO_SPAWN_POR_ESCENARIO[escenarioActual],
+    (ix, iz) => yMundo(ix, iz),
+    puedeOcuparObstaculo
+  );
 
   /* ---------- Ticks de minas e items ---------- */
   let minaTick = 0;
@@ -223,17 +281,81 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     return g;
   }
 
+  /* ---------- Lago que sube ---------- */
+  function crearPlanoAgua() {
+    const geo = new THREE.PlaneGeometry(160, 160);
+    geo.rotateX(-Math.PI / 2);
+    const mat = new THREE.MeshBasicMaterial({
+      color: 0x2f8fd0,
+      side: THREE.DoubleSide,
+    });
+    const m = new THREE.Mesh(geo, mat);
+    m.position.y = -0.2;
+    m.visible = escenarioActual === 'piramide';
+    scene.add(m);
+    return m;
+  }
+
+  /* ---------- Trampolines de La Torre ---------- */
+  const geoTrampolin = new THREE.CylinderGeometry(0.72, 0.72, 0.14, 12);
+  let trampolines = [];
+  let trampolinT = 0;
+
+  function crearTrampolinesTorre() {
+    limpiarTrampolines();
+    if (escenarioActual !== 'torre') return;
+    TRAMPOLINES_TORRE.forEach(([ix, iz]) => {
+      const mat = new THREE.MeshPhongMaterial({ color: 0xffd45e, flatShading: true });
+      const m = new THREE.Mesh(geoTrampolin, mat);
+      m.position.set(ix * 2, yMundo(ix, iz) + 1.1, iz * 2);
+      scene.add(m);
+      trampolines.push(m);
+    });
+    trampolinT = 0;
+  }
+
+  function limpiarTrampolines() {
+    trampolines.forEach((m) => { scene.remove(m); m.material.dispose(); });
+    trampolines.length = 0;
+  }
+
+  function actualizarTrampolines(delta) {
+    if (trampolines.length === 0) return;
+    trampolinT = (trampolinT + delta) % TRAMPOLIN_CICLO;
+    const activo = trampolinT < TRAMPOLIN_ACTIVO;
+    trampolines.forEach((m) => {
+      m.material.color.setHex(activo ? 0xffd45e : 0x7a7a7a);
+      m.scale.y = activo ? 1 + Math.sin(trampolinT * 8) * 0.15 : 0.6;
+    });
+  }
+
+  function trampolinActivoEn(ix, iz) {
+    return escenarioActual === 'torre'
+      && trampolinT < TRAMPOLIN_ACTIVO
+      && TRAMPOLINES_TORRE.some(([tx, tz]) => tx === ix && tz === iz);
+  }
+
   /* ---------- Saciedad ---------- */
   function actualizarBarraSaciedad() {
     const el = document.getElementById('hud-saciedad-relleno');
-    if (el) el.style.width = `${(saciedad / SACIEDAD_MAX) * 100}%`;
+    if (el) el.style.width = `${(saciedad / saciedadMax) * 100}%`;
+  }
+
+  function actualizarBarraAgua() {
+    const total = NIVEL_MAXIMO_POR_ESCENARIO.piramide;
+    const el = document.getElementById('hud-saciedad-relleno');
+    if (el) el.style.width = `${Math.min(100, (nivelAgua / total) * 100)}%`;
+    const txt = document.getElementById('hud-agua-nivel');
+    if (txt) txt.textContent = nivelAgua;
+    const cont = txt ? txt.closest('.hud__flotante') : null;
+    if (cont) cont.hidden = escenarioActual !== 'piramide';
   }
 
   function actualizarSaciedad(pts) {
     if (satisfecho) return;
-    saciedad = Math.min(SACIEDAD_MAX, saciedad + pts);
+    saciedad = Math.min(saciedadMax, saciedad + pts);
     actualizarBarraSaciedad();
-    if (saciedad >= SACIEDAD_MAX) {
+    if (saciedad >= saciedadMax) {
       satisfecho = true;
       if (nubeCima) nubeCima.visible = true;
       const el = document.getElementById('hud-saciedad-relleno');
@@ -289,8 +411,12 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     celdaZ = inicio.z;
     saltando = false;
     saltoT = 0;
+    duracionSaltoActual = DURACION_SALTO;
+    saltoLentoPendiente = false;
+    impulsoSalto = 0;
     jugador.position.set(celdaX * 2, yMundo(celdaX, celdaZ), celdaZ * 2);
-    camAngle  = Math.atan2(inicio.z, inicio.x);
+    alturaSaltoDesde = alturaEfectiva(celdaX, celdaZ);
+    camAngle  = escenarioActual === 'piramide' ? Math.PI / 2 : Math.atan2(inicio.z, inicio.x);
     camTarget = camAngle;
     camLookX  = celdaX * 2;
     camLookZ  = celdaZ * 2;
@@ -298,6 +424,8 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     patoRotTarget = Math.atan2(inicio.z, -inicio.x);
     jugador.rotation.y = patoRotTarget;
     bob.visible = true;
+    obstaculos.limpiar();
+    obstaculos.poblar({ celdaX, celdaZ });
   }
 
   /* ---------- Color del cronómetro según densidad de minas ---------- */
@@ -329,9 +457,11 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     if (minaTick < intervaloEfectivo) return;
     minaTick = 0;
 
-    // No superar el cap de minas por dificultad
+    // No superar el cap de minas por dificultad (contando las avisadas)
     const cap = Math.floor(estructura.tapasCount * (CAP_MINAS_PCT[dificultadActual] ?? 0.45));
-    if (estructura.minasCount >= cap) return;
+    let enCurso = estructura.minasPendientes;
+    const conAviso = modoActual === 'rey';
+    if (estructura.minasCount + enCurso >= cap) return;
 
     const nivelMax = NIVEL_MAXIMO_POR_ESCENARIO[escenarioActual];
     const rango    = RANGO_POR_ESCENARIO[escenarioActual];
@@ -339,40 +469,70 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     const cantidad = 1 + Math.floor(cronometroT / 60);
 
     for (let spawn = 0; spawn < cantidad; spawn++) {
-      if (estructura.minasCount >= cap) break; // verificar cap en cada iteración
+      if (estructura.minasCount + enCurso >= cap) break;
       for (let i = 0; i < 8; i++) {
         const ix = Math.floor(Math.random() * (rango * 2 + 1)) - rango;
         const iz = Math.floor(Math.random() * (rango * 2 + 1)) - rango;
         const nivel = alturaFn(ix, iz);
         if (nivel <= 0 || nivel >= nivelMax) continue;
         if (Math.random() < nivel / nivelMax) {
-          estructura.convertirEnMina(ix, iz);
-          break;
+          const ok = conAviso
+            ? estructura.avisarMina(ix, iz)
+            : estructura.convertirEnMina(ix, iz);
+          if (ok) { enCurso++; break; }
         }
       }
     }
   }
 
   /* ---------- Spawn periódico de items ---------- */
+  function itemsPorCuadrante() {
+    return ITEMS_POR_CUADRANTE[escenarioActual]?.[dificultadActual] ?? 2;
+  }
+
+  function spawnIslasLaterales() {
+    if (escenarioActual !== 'islas') return;
+    ISLAS_LATERALES.forEach(([ix, iz]) => coleccionables.spawn(ix, iz));
+  }
+
   function preSpawnItems() {
     for (const [qx, qz] of CUADRANTES) {
-      for (let i = 0; i < MIN_ITEMS_POR_CUADRANTE; i++) {
+      for (let i = 0; i < itemsPorCuadrante(); i++) {
         coleccionables.spawnEnCuadrante(qx, qz);
       }
     }
+    spawnIslasLaterales();
   }
 
   function tickItems(delta) {
+    if (escenarioActual === 'piramide') return;
     itemTick += delta;
     if (itemTick < INTERVALO_ITEMS) return;
     itemTick = 0;
     for (const [qx, qz] of CUADRANTES) {
-      const faltantes = MIN_ITEMS_POR_CUADRANTE - coleccionables.itemsEnCuadrante(qx, qz);
+      const faltantes = itemsPorCuadrante()
+        - coleccionables.itemsEnCuadrante(qx, qz, RANGO_SPAWN_POR_ESCENARIO[escenarioActual]);
       for (let i = 0; i < faltantes; i++) coleccionables.spawnEnCuadrante(qx, qz);
+    }
+    spawnIslasLaterales();
+  }
+
+  /* ---------- Colisión con mina / agua ---------- */
+  function perderVida(desdeMina, x, z) {
+    if (desdeMina) estructura.eliminarCubo(x, z);
+    vidas--;
+    actualizarVidas();
+    muerto = true;
+    bob.visible = false;
+    explosionActual = crearExplosion(scene, jugador.position.clone());
+
+    if (vidas <= 0) {
+      setTimeout(() => mostrarGameOver(), 900);
+    } else {
+      setTimeout(() => respawnJugador(), 900);
     }
   }
 
-  /* ---------- Colisión con mina y expansión de pirámide ---------- */
   function procesarAterrizaje(x, z) {
     const pts = coleccionables.recoger(x, z);
     if (pts !== null) {
@@ -380,41 +540,39 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
       const mult = racha >= 3 ? 2 : 1;
       score += pts * mult;
       actualizarScore();
-      actualizarSaciedad(pts);
+      if (escenarioActual === 'piramide') {
+        const intervalo = INTERVALO_AGUA[modoActual] || INTERVALO_AGUA.carrera;
+        aguaT = Math.max(0, aguaT - intervalo);
+        nivelAgua = Math.floor(aguaT / intervalo);
+        actualizarBarraAgua();
+      } else {
+        actualizarSaciedad(pts);
+      }
     } else {
       racha = 0;
     }
 
+    if (obstaculos.consumirHierba(x, z)) saltoLentoPendiente = true;
+
+    if (trampolinActivoEn(x, z)) impulsoSalto = 1;
+
+    if (!muerto && alturaEfectiva(x, z) < alturaSaltoDesde) obstaculos.invertirTortugas();
+
     if (estructura.esMina(x, z)) {
-      estructura.eliminarCubo(x, z);
-      vidas--;
-      actualizarVidas();
-      muerto = true;
-      bob.visible = false;
-
-      saciedad = Math.floor(saciedad / 2);
-      if (satisfecho) {
-        satisfecho = false;
-        if (nubeCima) nubeCima.visible = false;
-        const elBar = document.getElementById('hud-saciedad-relleno');
-        if (elBar) elBar.classList.remove('saciedad__relleno--llena');
-      }
-      actualizarBarraSaciedad();
-
-      explosionActual = crearExplosion(scene, jugador.position.clone());
-
-      if (vidas <= 0) {
-        setTimeout(() => mostrarGameOver(), 900);
-      } else {
-        setTimeout(() => respawnJugador(), 900);
-      }
+      perderVida(true, x, z);
       return;
+    }
+
+    if (!muerto) {
+      const inicio = INICIO_POR_ESCENARIO[escenarioActual];
+      if (!(x === inicio.x && z === inicio.z)) estructura.registrarPaso(x, z);
     }
 
     actualizarHUD();
 
-    /* Victoria: pato llegó al nivel máximo Y está satisfecho */
-    if (alturaEfectiva(x, z) >= NIVEL_MAXIMO_POR_ESCENARIO[escenarioActual] && satisfecho) {
+    /* Victoria: en pirámide basta la cima; en los otros hace falta la nube */
+    const enCima = alturaEfectiva(x, z) >= NIVEL_MAXIMO_POR_ESCENARIO[escenarioActual];
+    if (enCima && (escenarioActual === 'piramide' || satisfecho)) {
       mostrarVictoria();
     }
   }
@@ -457,23 +615,37 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     const nx = celdaX + dx;
     const nz = celdaZ + dz;
 
+    if (estructura.estaCaido(nx, nz)) return;
+
+    if (obstaculos.estaBloqueada(nx, nz)) return;
+
+    // La mitad trasera (z < 0) queda fuera de alcance en La Pirámide
+    if (escenarioActual === 'piramide' && nz < 0) return;
+
     if (alturaFn(nx, nz) <= 0) return;
+
+    const maxSubida = impulsoSalto > 0 ? 3 : (MAX_SUBIDA_POR_ESCENARIO[escenarioActual] ?? 1);
+    if (alturaEfectiva(nx, nz) - alturaEfectiva(celdaX, celdaZ) > maxSubida) return;
 
     if (dx ===  1) patoRotTarget =  0;
     if (dx === -1) patoRotTarget =  Math.PI;
     if (dz === -1) patoRotTarget =  Math.PI / 2;
     if (dz ===  1) patoRotTarget = -Math.PI / 2;
 
+    alturaSaltoDesde = alturaEfectiva(celdaX, celdaZ);
     saltoDesde = { x: celdaX * 2, y: jugador.position.y, z: celdaZ * 2 };
     saltoHasta = { x: nx * 2, y: yMundo(nx, nz), z: nz * 2 };
     celdaX = nx;
     celdaZ = nz;
 
-    // Actualizar ángulo al INICIAR el salto para respuesta inmediata
-    if (Math.abs(celdaX) + Math.abs(celdaZ) > 0.1) {
+    // En la pirámide la cámara queda fija para no perder la referencia del centro
+    if (escenarioActual !== 'piramide' && Math.abs(celdaX) + Math.abs(celdaZ) > 0.1) {
       camTarget = Math.atan2(celdaZ, celdaX);
     }
 
+    duracionSaltoActual = saltoLentoPendiente ? DURACION_SALTO * 1.65 : DURACION_SALTO;
+    saltoLentoPendiente = false;
+    impulsoSalto = 0;
     saltando = true;
     saltoT = 0;
 
@@ -485,12 +657,12 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     if (e.target.closest('#boton-reintentar')) {
       const overlay = document.getElementById('game-over');
       if (overlay) overlay.classList.add('oculto');
-      reiniciar(escenarioActual, patoColor, patoOjoColor, dificultadActual);
+      reiniciar(escenarioActual, patoColor, patoOjoColor, dificultadActual, modoActual);
     }
     if (e.target.closest('#btn-victoria-nuevo')) {
       const overlay = document.getElementById('victoria');
       if (overlay) overlay.hidden = true;
-      reiniciar(escenarioActual, patoColor, patoOjoColor, dificultadActual);
+      reiniciar(escenarioActual, patoColor, patoOjoColor, dificultadActual, modoActual);
     }
     if (e.target.closest('#btn-victoria-menu')) {
       const overlay = document.getElementById('victoria');
@@ -499,7 +671,10 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
   });
 
   nubeCima = crearNubeCima();
+  planoAgua = crearPlanoAgua();
+  crearTrampolinesTorre();
   preSpawnItems();
+  actualizarBarraAgua();
 
   renderer.setAnimationLoop(animate);
 
@@ -549,7 +724,7 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     if (!estaActivo) { renderer.render(scene, camera); return; }
 
     if (saltando) {
-      saltoT = Math.min(1, saltoT + delta / DURACION_SALTO);
+      saltoT = Math.min(1, saltoT + delta / duracionSaltoActual);
       const t = saltoT;
       jugador.position.x = lerp(saltoDesde.x, saltoHasta.x, t);
       jugador.position.z = lerp(saltoDesde.z, saltoHasta.z, t);
@@ -571,11 +746,40 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     }
 
     if (cronometroActivo) {
-      tickMinas(delta);
+      if (modoActual !== 'carrera') tickMinas(delta);
       tickItems(delta);
       actualizarCronometroColor();
     }
+
+    if (cronometroActivo && escenarioActual === 'piramide' && planoAgua) {
+      const intervalo = INTERVALO_AGUA[modoActual] || INTERVALO_AGUA.carrera;
+      aguaT += delta;
+      nivelAgua = Math.floor(aguaT / intervalo);
+      planoAgua.visible = true;
+      planoAgua.position.y = nivelAgua * 2 - 1 + 0.8 + Math.sin(cronometroT * 1.5) * 0.08;
+      actualizarBarraAgua();
+
+      if (!muerto && alturaEfectiva(celdaX, celdaZ) <= nivelAgua) {
+        perderVida(false);
+        nivelAgua = Math.max(0, Math.min(nivelAgua - BAJADA_AGUA_MUERTE, 4));
+        aguaT = nivelAgua * intervalo;
+        actualizarBarraAgua();
+      }
+    }
+
+    if (!muerto && !saltando && estructura.estaCaido(celdaX, celdaZ)) {
+      perderVida(false);
+    }
+
     coleccionables.animar(delta);
+    actualizarTrampolines(delta);
+    obstaculos.animar(delta, {
+      celdaX: saltando ? Math.round(saltoDesde.x / 2) : celdaX,
+      celdaZ: saltando ? Math.round(saltoDesde.z / 2) : celdaZ,
+      destinoX: saltando ? Math.round(saltoHasta.x / 2) : celdaX,
+      destinoZ: saltando ? Math.round(saltoHasta.z / 2) : celdaZ,
+      saltando,
+    });
     estructura.animarMinas(delta);
 
     if (nubeCima && nubeCima.visible) {
@@ -619,24 +823,42 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
   }
 
   /* ---------- Control de escenario ---------- */
-  function reiniciar(tipo = 'piramide', colorHex = patoColor, colorOjo = patoOjoColor, dificultad = dificultadActual) {
+  function reiniciar(tipo = 'piramide', colorHex = patoColor, colorOjo = patoOjoColor, dificultad = dificultadActual, modo = 'carrera') {
     estructura.limpiar();
     coleccionables.limpiar();
+    obstaculos.limpiar();
+    limpiarTrampolines();
     if (explosionActual) { explosionActual = null; }
 
     escenarioActual  = tipo;
     patoColor        = colorHex;
     patoOjoColor     = colorOjo;
     dificultadActual = dificultad || 'normal';
+    modoActual       = modo || 'carrera';
 
-    estructura = crearEstructura(scene, tipo, dificultadActual);
+    estructura = crearEstructura(scene, tipo, dificultadActual, CELDAS_PROTEGIDAS);
     alturaFn = estructura.alturaFn;
     elevacion = estructura.elevacion || 0;
+    crearTrampolinesTorre();
 
-    coleccionables = crearSistemaColeccionables(scene, alturaFn, RANGO_POR_ESCENARIO[tipo] || 5);
+    coleccionables = crearSistemaColeccionables(
+      scene,
+      alturaFn,
+      RANGO_SPAWN_POR_ESCENARIO[tipo] || 5,
+      (ix, iz) => yMundo(ix, iz)
+    );
+    obstaculos = crearSistemaObstaculos(
+      scene,
+      alturaFn,
+      RANGO_SPAWN_POR_ESCENARIO[tipo] || 5,
+      (ix, iz) => yMundo(ix, iz),
+      puedeOcuparObstaculo
+    );
+    obstaculos.configurar(dificultadActual);
     minaTick = 0;
     itemTick  = 0;
 
+    saciedadMax = SACIEDAD_MAX_POR_MODO[modoActual] ?? SACIEDAD_MAX_POR_MODO.carrera;
     saciedad   = 0;
     satisfecho = false;
     nubeCimaT  = 0;
@@ -647,12 +869,22 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     celdaZ = inicio.z;
     saltando = false;
     saltoT = 0;
+    duracionSaltoActual = DURACION_SALTO;
+    saltoLentoPendiente = false;
+    impulsoSalto = 0;
     muerto = false;
     vidas = 3;
     score = 0;
     racha = 0;
     cronometroT = 0;
     cronometroActivo = false;
+
+    aguaT = 0;
+    nivelAgua = 0;
+    if (planoAgua) {
+      planoAgua.visible = (tipo === 'piramide');
+      planoAgua.position.y = -0.2;
+    }
 
     if (elTiempo) { elTiempo.textContent = '00:00'; elTiempo.style.color = ''; }
 
@@ -664,8 +896,9 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     bob.visible = true;
 
     jugador.position.set(celdaX * 2, yMundo(celdaX, celdaZ), celdaZ * 2);
+    alturaSaltoDesde = alturaEfectiva(celdaX, celdaZ);
 
-    camAngle  = Math.atan2(inicio.z, inicio.x);
+    camAngle  = escenarioActual === 'piramide' ? Math.PI / 2 : Math.atan2(inicio.z, inicio.x);
     camTarget = camAngle;
     camLookX  = celdaX * 2;
     camLookZ  = celdaZ * 2;
@@ -686,6 +919,8 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
 
     nubeCima = crearNubeCima();
     preSpawnItems();
+    obstaculos.poblar({ celdaX, celdaZ });
+    actualizarBarraAgua();
     actualizarBarraSaciedad();
     const elBar = document.getElementById('hud-saciedad-relleno');
     if (elBar) elBar.classList.remove('saciedad__relleno--llena');
