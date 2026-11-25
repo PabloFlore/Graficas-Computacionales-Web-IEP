@@ -1,7 +1,7 @@
 import { iniciarNavegacion, mostrarVista } from './util/navegacion.js';
 import { iniciarEscena } from './motor/escena.js';
 import { iniciarFormulario } from './red/formulario.js';
-import { iniciarMultijugador, conectarJugador, enviarPosicion, emitirEscenario } from './red/multijugador.js';
+import { iniciarMultijugador, buscarPartida, cancelarBusqueda, reportarEliminado, enviarPosicion } from './red/multijugador.js';
 import { iniciarSelectorPatos } from './motor/selector-patos.js';
 import { iniciarPatoMenu } from './motor/pato-menu.js';
 import { cargarPuntuaciones, enviarPuntuacion, obtenerPuntuaciones } from './red/puntuaciones.js';
@@ -10,8 +10,7 @@ import { iniciarPreviewsEscenario } from './motor/previews-escenario.js';
 let escenarioPendiente = 'piramide';
 let modoPendiente = 'carrera';
 let dificultadPendiente = 'normal';
-let jugadorRegistrado = false;
-let ignorarEscenarioPropio = false;
+let nombreMultiActual = '';
 
 document.addEventListener('DOMContentLoaded', async () => {
   iniciarNavegacion();
@@ -24,36 +23,32 @@ document.addEventListener('DOMContentLoaded', async () => {
   const escena        = await iniciarEscena({
     alMoverJugador: enviarPosicion,
     alGanar: async ({ nombre, score }) => {
-      try { await enviarPuntuacion(nombre, score); } catch {}
+      try {
+        await enviarPuntuacion(nombre, score);
+      } catch (err) {
+        console.warn('No se pudo guardar la puntuación (¿Apache/MySQL encendidos?):', err);
+      }
       cargarRankingMenu();
     },
+    alPerder: reportarEliminado,
   });
   const selectorPatos = iniciarSelectorPatos();
 
   iniciarMultijugador({
-    alEntrar: (jugador) => {
-      escena.agregarJugadorRemoto(jugador);
-      agregarJugadorSala(jugador);
-    },
-    alMover: (jugador) => escena.moverJugadorRemoto(jugador),
-    alSalir: (id) => {
-      escena.quitarJugadorRemoto(id);
-      quitarJugadorSala(id);
-    },
-    alCambiarEscenario: (data) => {
-      if (ignorarEscenarioPropio) {
-        ignorarEscenarioPropio = false;
-        return;
-      }
-      const info = typeof data === 'string' ? { escenario: data } : (data || {});
-      const escenario = info.escenario || escenarioPendiente;
-      modoPendiente = info.modo || modoPendiente || 'carrera';
+    alEncontrarPartida: (data) => {
+      const { semilla, dificultad, oponente, spawn } = data;
       const cfg = selectorPatos.getPatolSeleccionado();
-      escena.reiniciar(escenario, cfg.colorCuerpo, cfg.colorOjo, dificultadPendiente ?? 'normal', modoPendiente);
+      escena.reiniciar('batalla', cfg.colorCuerpo, cfg.colorOjo, dificultad ?? 'normal', 'carrera', semilla, spawn);
+      escena.setNombreJugador(nombreMultiActual);
+      escena.agregarJugadorRemoto(oponente);
+      mostrarVista('vista-juego');
     },
+    alMover: (j) => escena.moverJugadorRemoto(j),
+    alSalir: (id) => escena.quitarJugadorRemoto(id),
+    alRivalEliminado: () => escena.mostrarVictoriaBatalla(),
   });
 
-  engancharMultijugador();
+  engancharMultijugador(escena, selectorPatos);
   engancharSeleccion(escena);
   engancharColores(escena, selectorPatos);
   engancharPausa(escena);
@@ -103,50 +98,37 @@ function actualizarBotonVerMas(cantidad) {
   boton.classList.toggle('ranking-menu__ver-mas--visible', cantidad > 5);
 }
 
-function engancharMultijugador() {
-  document.getElementById('boton-crear-sala')?.addEventListener('click', () => registrarEnSala('nombre-multi'));
-  document.getElementById('boton-unirse')?.addEventListener('click', () => registrarEnSala('nombre-unirse'));
-
-  document.getElementById('boton-iniciar-multi')?.addEventListener('click', () => {
-    emitirEscenario(escenarioPendiente, modoPendiente);
-    mostrarVista('vista-juego');
+function engancharMultijugador(escena, selectorPatos) {
+  document.getElementById('boton-ir-multi')?.addEventListener('click', () => {
+    if (window.fbNombreJugador) {
+      nombreMultiActual = window.fbNombreJugador;
+      const cfg = selectorPatos.getPatolSeleccionado();
+      buscarPartida(nombreMultiActual, cfg.colorCuerpo, cfg.colorOjo, 'normal');
+      mostrarVista('vista-multi-espera');
+    } else {
+      mostrarVista('vista-multi-nombre');
+    }
   });
-}
 
-function registrarEnSala(idCampo) {
-  const campo = document.getElementById(idCampo);
-  const nombre = campo?.value.trim();
-  if (!nombre) {
-    campo?.classList.add('campo--error');
-    campo?.focus();
-    campo?.addEventListener('input', () => campo.classList.remove('campo--error'), { once: true });
-    return;
-  }
+  document.getElementById('boton-multi-nombre')?.addEventListener('click', () => {
+    const campo = document.getElementById('nombre-multi-lobby');
+    const nombre = campo?.value.trim();
+    if (!nombre) {
+      campo?.classList.add('campo--error');
+      campo?.focus();
+      campo?.addEventListener('input', () => campo.classList.remove('campo--error'), { once: true });
+      return;
+    }
+    nombreMultiActual = nombre;
+    const cfg = selectorPatos.getPatolSeleccionado();
+    buscarPartida(nombreMultiActual, cfg.colorCuerpo, cfg.colorOjo, 'normal');
+    mostrarVista('vista-multi-espera');
+  });
 
-  if (!jugadorRegistrado) {
-    ignorarEscenarioPropio = true;
-    setTimeout(() => { ignorarEscenarioPropio = false; }, 3000);
-    conectarJugador(nombre);
-    jugadorRegistrado = true;
-  }
-
-  const anfitrion = document.querySelector('#sala-jugadores-lista .sala-jugador--anfitrion');
-  if (anfitrion) anfitrion.textContent = `Tú (${nombre})`;
-  mostrarVista('vista-sala-espera');
-}
-
-function agregarJugadorSala(jugador) {
-  const lista = document.getElementById('sala-jugadores-lista');
-  if (!lista || lista.querySelector(`[data-id="${jugador.id}"]`)) return;
-  const li = document.createElement('li');
-  li.className = 'sala-jugador';
-  li.dataset.id = jugador.id;
-  li.textContent = jugador.nombre;
-  lista.appendChild(li);
-}
-
-function quitarJugadorSala(id) {
-  document.querySelector(`#sala-jugadores-lista [data-id="${id}"]`)?.remove();
+  document.getElementById('boton-cancelar-multi')?.addEventListener('click', () => {
+    cancelarBusqueda();
+    mostrarVista('vista-menu');
+  });
 }
 
 function engancharSeleccion(escena) {
@@ -178,9 +160,9 @@ function engancharSeleccion(escena) {
       modoPendiente = botonModo.dataset.modo || 'carrera';
     }
 
-    const botonDif = e.target.closest('.boton--dificultad');
+    const botonDif = e.target.closest('.boton--dificultad:not(.boton--dif-multi)');
     if (botonDif) {
-      document.querySelectorAll('.boton--dificultad').forEach((b) =>
+      document.querySelectorAll('.boton--dificultad:not(.boton--dif-multi)').forEach((b) =>
         b.classList.remove('boton--dificultad--activo')
       );
       botonDif.classList.add('boton--dificultad--activo');
@@ -189,7 +171,7 @@ function engancharSeleccion(escena) {
 
     const nav = e.target.closest('[data-vista]');
     if (nav?.dataset.vista === 'vista-dificultad') {
-      document.querySelectorAll('.boton--dificultad').forEach((b) =>
+      document.querySelectorAll('.boton--dificultad:not(.boton--dif-multi)').forEach((b) =>
         b.classList.remove('boton--dificultad--activo')
       );
       dificultadPendiente = null;
@@ -213,9 +195,7 @@ function engancharColores(escena, selectorPatos) {
 
     const cfg = selectorPatos.getPatolSeleccionado();
     escena.reiniciar(escenarioPendiente, cfg.colorCuerpo, cfg.colorOjo, dificultadPendiente ?? 'normal', modoPendiente ?? 'carrera');
-    ignorarEscenarioPropio = true;
-    setTimeout(() => { ignorarEscenarioPropio = false; }, 1000);
-    emitirEscenario(escenarioPendiente, modoPendiente);
+    escena.setNombreJugador(nombre);
     mostrarVista('vista-juego');
   });
 }
