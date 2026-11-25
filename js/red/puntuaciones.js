@@ -1,5 +1,5 @@
-const API_PUNTUACIONES = '/api/puntuaciones';
-const API_GUARDAR = '/api/WebServices';
+const API_PUNTUACIONES = 'http://localhost/api/puntuaciones.php';
+const API_GUARDAR = 'http://localhost/api/WebServices.php';
 
 export async function obtenerPuntuaciones() {
   const res = await fetch(API_PUNTUACIONES);

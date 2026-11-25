@@ -1,7 +1,6 @@
 const express = require('express');
 const { createServer } = require('node:http');
 const { join } = require('node:path');
-const { readFileSync, writeFileSync } = require('node:fs');
 const { Server } = require('socket.io');
 
 const app = express();
@@ -9,32 +8,8 @@ const server = createServer(app);
 const io = new Server(server);
 
 const PUERTO = process.env.PORT || 4000;
-const SCORES_FILE = join(__dirname, 'data', 'scores.json');
 
-function leerScores() {
-  try { return JSON.parse(readFileSync(SCORES_FILE, 'utf8')); }
-  catch { return []; }
-}
-
-function guardarScores(scores) {
-  writeFileSync(SCORES_FILE, JSON.stringify(scores, null, 2), 'utf8');
-}
-
-app.get('/api/puntuaciones', (_req, res) => {
-  const scores = leerScores().sort((a, b) => b.puntos - a.puntos);
-  res.json(scores.slice(0, 10));
-});
-
-app.post('/api/WebServices', (req, res) => {
-  const nombre = (req.query.nombre || '').trim();
-  const puntos = parseInt(req.query.score || '0', 10);
-  if (!nombre || isNaN(puntos)) return res.status(400).send('Faltan datos');
-  const scores = leerScores();
-  scores.push({ nombre, puntos });
-  guardarScores(scores);
-  res.send('OK');
-});
-
+app.use('/api', (req, res) => res.status(404).end());
 app.use(express.static(join(__dirname)));
 app.get('/', (req, res) => res.sendFile(join(__dirname, 'index.html')));
 
