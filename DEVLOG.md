@@ -6,6 +6,26 @@ Historial de cambios y decisiones de desarrollo.
 
 ## 2026-11-24
 
+### Power-ups, audio y feedback (rúbrica de entrega final)
+
+**Power-ups (ítems especiales, 3 mínimo) — `js/motor/powerups.js`**
+- Nuevo sistema al estilo de `coleccionables`/`obstaculos` (`spawn/recoger/animar/limpiar`), con malla low-poly y aparición en celdas válidas vía `puedeOcuparObstaculo`
+- 🛟 **Escudo**: absorbe el siguiente golpe mortal (mina, agua o cubo caído) sin costar vida; aro azul alrededor del pato
+- 🪽 **Pluma (doble salto)**: +1 nivel de subida durante 8s (pirámide/torre suben 2, islas 3)
+- 🧲 **Imán**: al aterrizar también recoge los coleccionables de las 4 celdas vecinas durante 8s
+- Aparecen de a máx. 2 en el tablero cada ~12s; HUD inferior con los efectos activos y su cuenta regresiva
+
+**Audio — `js/motor/sonidos.js`**
+- Reescrito con síntesis WebAudio (no requiere .mp3): salto, recoger, mina, game over, escudo, power-up y victoria
+- **Música de fondo** generativa en loop (arpegio pentatónico), inicia con el primer salto y respeta volumen/sonido de preferencias; se detiene en pausa, game over y victoria
+
+**Jugabilidad / feedback**
+- La **racha** ya no se rompe en cada salto sin objeto: solo al perder vida o tras 4s sin recoger. Multiplicador escalonado ×2 (racha 3) y ×3 (racha 6)
+- **Bonus al coronar la cima**: +500 base, +2 por segundo bajo 5:00 y +150 por vida restante
+- Rareza en coleccionables: semilla 35 / manzana 30 / zanahoria 20 / dulce 10 (los de mayor valor salen menos)
+- Texto flotante "+N" al recoger y pequeño *squash* del pato al aterrizar
+- **Luz focal** (`PointLight`) que sigue al pato, además de la ambiental y la direccional
+
 ### Torre e Islas: dificultad y modo de juego completos
 
 **Dificultad en los 3 escenarios**
@@ -163,11 +183,12 @@ Commit: `6c8a399`
 |---|---|
 | ~~Condición de victoria (llegar al nivel 11)~~ | ~~Alta~~ ✓ |
 | ~~Conectar dificultad a lógica del juego~~ | ~~Alta~~ ✓ |
-| 3 objetos especiales / power-ups | Alta (rubro) |
-| Música de fondo | Media (rubro) |
-| Sonidos de juego (cuak, salto, recoger, mina) | Media |
+| ~~3 objetos especiales / power-ups~~ | ~~Alta (rubro)~~ ✓ |
+| ~~Música de fondo~~ | ~~Media (rubro)~~ ✓ |
+| ~~Sonidos de juego (cuak, salto, recoger, mina)~~ | ~~Media~~ ✓ |
 | Verificar colisiones en los 3 escenarios | Media |
 | Depredador que persigue (zorro) — ver "Ideas propuestas" | Media |
+| Control táctil (móvil) | Media |
 
 ---
 
