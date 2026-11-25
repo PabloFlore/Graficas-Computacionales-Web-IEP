@@ -2,7 +2,7 @@ import * as THREE from 'three';
 
 const W = 180, H = 200;
 
-const SKY = { piramide: 0x6cc0f0, torre: 0xffb85e, islas: 0xb8d4e0 };
+const SKY = { piramide: 0x6cc0f0, torre: 0xffb85e, islas: 0xb8d4e0, arena: 0x7ec87a };
 
 function _geoVC() {
   const geo = new THREE.BoxGeometry(1, 1, 1);
@@ -142,6 +142,24 @@ function _render(id, cubos, camPos, lookAt, zoom, skyHex, nubePos) {
   renderer.dispose();
 }
 
+function _cubos_arena() {
+  const c = [];
+  const pirs = [[0,0],[4,4],[-4,4],[4,-4],[-4,-4],[0,5],[5,0]];
+  for (let ix = -8; ix <= 8; ix++)
+    for (let iz = -8; iz <= 8; iz++) {
+      let h = 1;
+      for (const [px, pz] of pirs) {
+        const d = Math.max(Math.abs(ix - px), Math.abs(iz - pz));
+        if (d === 0) h = Math.max(h, 5);
+        else if (d === 1) h = Math.max(h, 4);
+        else if (d === 2) h = Math.max(h, 3);
+        else if (d === 3) h = Math.max(h, 2);
+      }
+      for (let iy = 0; iy < h; iy++) c.push([ix, iy, iz]);
+    }
+  return c;
+}
+
 export function iniciarPreviewsEscenario() {
   const camPos = [20, 18, 20];
 
@@ -151,4 +169,6 @@ export function iniciarPreviewsEscenario() {
   try { _render('preview-multi-piramide', _cubos_piramide(), camPos,       [0, 3, 0], 10, SKY.piramide, []); } catch(e) { console.error('preview-multi-piramide', e); }
   try { _render('preview-multi-torre',    _cubos_torre(),    camPos,       [0, 7, 0], 12, SKY.torre,    []); } catch(e) { console.error('preview-multi-torre',    e); }
   try { _render('preview-multi-islas',    _cubos_islas(), [18, 16, 18], [-4, 1, 5], 20, SKY.islas,    []); } catch(e) { console.error('preview-multi-islas',    e); }
+  try { _render('preview-arena',          _cubos_arena(), [22, 20, 22], [0, 1, 0],  28, SKY.arena,    []); } catch(e) { console.error('preview-arena',           e); }
+  try { _render('preview-multi-arena',    _cubos_arena(), [22, 20, 22], [0, 1, 0],  28, SKY.arena,    []); } catch(e) { console.error('preview-multi-arena',    e); }
 }

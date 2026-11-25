@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { rand } from '../util/rng.js';
 
 /* ---- Vertex-colored geometry builders ---- */
 // Face order in BoxGeometry: +X, -X, +Y, -Y, +Z, -Z  (4 verts each = 24 total)
@@ -115,9 +116,32 @@ function alturaIslas(ix, iz) {
   return 0;
 }
 
+const PIRAMIDES_ARENA = [
+  [0, 0], [7, 7], [-7, 7], [7, -7], [-7, -7], [0, 9], [9, 0],
+];
+
+function alturaArena(ix, iz) {
+  if (Math.max(Math.abs(ix), Math.abs(iz)) > 11) return 0;
+  let h = 1;
+  for (const [px, pz] of PIRAMIDES_ARENA) {
+    const d = Math.max(Math.abs(ix - px), Math.abs(iz - pz));
+    if (d === 0) h = Math.max(h, 5);
+    else if (d === 1) h = Math.max(h, 4);
+    else if (d === 2) h = Math.max(h, 3);
+    else if (d === 3) h = Math.max(h, 2);
+  }
+  return h;
+}
+
+function alturaBatalla(ix, iz) {
+  return Math.max(Math.abs(ix), Math.abs(iz)) <= 10 ? 1 : 0;
+}
+
 export function obtenerAlturaFn(tipo) {
-  if (tipo === 'torre') return alturaTorre;
-  if (tipo === 'islas') return alturaIslas;
+  if (tipo === 'torre')    return alturaTorre;
+  if (tipo === 'islas')    return alturaIslas;
+  if (tipo === 'arena')    return alturaArena;
+  if (tipo === 'batalla')  return alturaBatalla;
   return alturaEn;
 }
 
@@ -125,18 +149,20 @@ export function obtenerAlturaFn(tipo) {
 
 const NIVEL_INICIAL_PIRAMIDE = 4;
 const MAX_DYN_MINAS = 60;
-const ELEV_POR_TIPO = { piramide: 0, torre: 0, islas: 3 };
+const ELEV_POR_TIPO = { piramide: 0, torre: 0, islas: 3, arena: 0, batalla: 0 };
 const PROB_MINAS_ESTATICA = {
   piramide: { facil: 0.015, normal: 0.03, dificil: 0.06 },
   torre:    { facil: 0.03,   normal: 0.06, dificil: 0.12 },
   islas:    { facil: 0.025,  normal: 0.05, dificil: 0.10 },
+  arena:    { facil: 0.01,   normal: 0.02, dificil: 0.04 },
+  batalla:  { facil: 0,      normal: 0,    dificil: 0 },
 };
 
 export function crearEstructura(escena, tipo = 'piramide', dificultad = 'normal', celdasProtegidas = []) {
   _setMineTopColor(_C_MINA_A);
 
   const alturaFn = obtenerAlturaFn(tipo);
-  const RANGO = tipo === 'islas' ? 16 : tipo === 'piramide' ? 10 : 5;
+  const RANGO = tipo === 'islas' ? 16 : tipo === 'piramide' ? 10 : tipo === 'arena' ? 12 : tipo === 'batalla' ? 10 : 5;
   const ELEVACION = ELEV_POR_TIPO[tipo] || 0;
   const probMinas = PROB_MINAS_ESTATICA[tipo]?.[dificultad] ?? 0.03;
   const probCuboCae = PROB_CUBO_CAE[dificultad] ?? PROB_CUBO_CAE.normal;
@@ -164,7 +190,7 @@ export function crearEstructura(escena, tipo = 'piramide', dificultad = 'normal'
       for (let h = 0; h < hMax; h++) {
         const nivel  = h + 1;
         const esTapa = h === hMax - 1;
-        const esMina = esTapa && hMax > 1 && !esProtegida(ix, iz) && Math.random() < probMinas;
+        const esMina = esTapa && hMax > 1 && !esProtegida(ix, iz) && rand() < probMinas;
         if (esBloqueado) nBloqueado++;
         else if (esMina) nMinas++; else nSeguro++;
         cubeData.push({
@@ -384,7 +410,7 @@ export function crearEstructura(escena, tipo = 'piramide', dificultad = 'normal'
     if (!tapa || tapa.isMina || tapa.bloqueado) return false;
     if (esProtegida(ix, iz)) return false;
     if (alturaFn(ix, iz) >= alturaFn(0, 0)) return false;
-    if (Math.random() >= probCuboCae) return false;
+    if (rand() >= probCuboCae) return false;
     pasosPendientes.set(key, { ix, iz, t: 0 });
     return true;
   }
@@ -497,6 +523,7 @@ export function crearEstructura(escena, tipo = 'piramide', dificultad = 'normal'
     avisarMina,
     convertirEnMina,
     eliminarCubo,
+    desprenderCubo,
     limpiar,
     revelarNivel,
     elevacion: ELEVACION,
