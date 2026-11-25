@@ -1,14 +1,25 @@
 import * as THREE from 'three';
 import { crearEstructura } from './piramide.js';
+import { setSeed } from '../util/rng.js';
 import { crearPato } from './pato.js';
 import { crearExplosion } from './explosion.js';
 import { crearSistemaColeccionables } from './coleccionables.js';
 import { crearSistemaObstaculos } from './obstaculos.js';
+import { crearSistemaPowerups } from './powerups.js';
+import {
+  sonidoSalto, sonidoRecoger, sonidoMina, sonidoGameOver,
+  sonidoEscudo, sonidoPowerup, sonidoVictoria,
+  iniciarMusica, detenerMusica,
+} from './sonidos.js';
+
+const SPAWNS_BATALLA = { a: { x: 0, z: 8 }, b: { x: 0, z: -8 } };
 
 const INICIO_POR_ESCENARIO = {
   piramide: { x: 0, z: 10 },
   torre:    { x: 3, z: 0 },
   islas:    { x: -10, z: 4 },
+  arena:    { x: 10, z: -2 },
+  batalla:  SPAWNS_BATALLA.a,
 };
 
 const TRAMPOLINES_TORRE = [[1, 2], [2, -1]];
@@ -18,6 +29,7 @@ const TRAMPOLIN_ACTIVO = 3;
 const CELDAS_PROTEGIDAS = [
   ...Object.values(INICIO_POR_ESCENARIO).map(({ x, z }) => [x, z]),
   [0, 0],
+  [SPAWNS_BATALLA.b.x, SPAWNS_BATALLA.b.z],
   ...TRAMPOLINES_TORRE,
 ];
 
@@ -25,23 +37,31 @@ const FONDO_POR_ESCENARIO = {
   piramide: '#6cc0f0',
   torre:    '#ff9d3d',
   islas:    '#b8d4e0',
+  arena:    '#7ec87a',
+  batalla:  '#2f8fd0',
 };
 
 const RANGO_POR_ESCENARIO = {
   piramide: 10,
   torre: 5,
   islas: 14,
+  arena: 11,
+  batalla: 10,
 };
 
-const NIVEL_MAXIMO_POR_ESCENARIO = { piramide: 11, torre: 14, islas: 11 };
-const MAX_SUBIDA_POR_ESCENARIO   = { piramide: 1, torre: 1, islas: 2 };
-const RANGO_SPAWN_POR_ESCENARIO  = { piramide: 10, torre: 5, islas: 5 };
+const NIVEL_MAXIMO_POR_ESCENARIO = { piramide: 11, torre: 14, islas: 11, arena: 5, batalla: 999 };
+const MAX_SUBIDA_POR_ESCENARIO   = { piramide: 1, torre: 1, islas: 2, arena: 1, batalla: 0 };
+const RANGO_SPAWN_POR_ESCENARIO  = { piramide: 10, torre: 5, islas: 5, arena: 10, batalla: 10 };
 
 const ITEMS_POR_CUADRANTE = {
   piramide: { facil: 3, normal: 2, dificil: 1 },
   torre:    { facil: 6, normal: 5, dificil: 4 },
   islas:    { facil: 6, normal: 5, dificil: 4 },
+  arena:    { facil: 5, normal: 4, dificil: 3 },
+  batalla:  { facil: 5, normal: 4, dificil: 3 },
 };
+
+const INTERVALO_SHRINK = { facil: 20, normal: 15, dificil: 10 };
 const ISLAS_LATERALES = [[-13, 0], [13, 0]];
 
 const INTERVALO_MINAS  = { facil: 2.0, normal: 1.2, dificil: 0.6 };
@@ -53,7 +73,7 @@ const CUADRANTES = [[1,1],[-1,1],[-1,-1],[1,-1]];
 
 function lerp(a, b, t) { return a + (b - a) * t; }
 
-export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
+export async function iniciarEscena({ alMoverJugador, alGanar, alPerder } = {}) {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
   const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
@@ -69,6 +89,10 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
   const sol = new THREE.DirectionalLight(0xffffff, 1.2);
   sol.position.set(10, 12, 10);
   scene.add(sol);
+  // Luz focal (puntual) que sigue al pato: ilumina el entorno inmediato
+  const luzFocal = new THREE.PointLight(0xfff4d6, 1.1, 32, 1.6);
+  luzFocal.position.set(0, 10, 6);
+  scene.add(luzFocal);
 
   /* ---------- Estructura inicial ---------- */
   let estructura = crearEstructura(scene, 'piramide', 'normal', CELDAS_PROTEGIDAS);
@@ -105,6 +129,20 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
   let patoColor = 0xffd45e;
   let patoOjoColor = 0x1a1a2e;
   let dificultadActual = 'normal';
+  let modoFPS = true;
+
+  /* ---------- Racha ---------- */
+  const RACHA_TIMEOUT = 4;   // segundos sin recoger antes de perder la racha
+  let rachaRestante = 0;
+
+  /* ---------- Power-ups ---------- */
+  let powerups = null;
+  let powerupTick = 0;
+  const INTERVALO_POWERUP = 12;  // intento de aparición
+  let escudoActivo  = false;
+  let plumaRestante = 0;         // doble salto
+  let imanRestante  = 0;         // imán de puntos
+  let squashT = 0;               // animación de aterrizaje
 
   /* ---------- Saciedad ---------- */
   const SACIEDAD_MAX_POR_MODO = { carrera: 30, rey: 40 };
@@ -133,6 +171,16 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
   pato.position.y = 1;
   pato.scale.setScalar(1.4);
   bob.add(pato);
+
+  /* ---------- Aro de escudo (visible al tener el power-up) ---------- */
+  const escudoMesh = new THREE.Mesh(
+    new THREE.TorusGeometry(0.9, 0.08, 8, 20),
+    new THREE.MeshBasicMaterial({ color: 0x3ad1ff, transparent: true, opacity: 0.6 })
+  );
+  escudoMesh.rotation.x = Math.PI / 2;
+  escudoMesh.position.y = 1;
+  escudoMesh.visible = false;
+  bob.add(escudoMesh);
 
   /* ---------- Animación de bob ---------- */
   const reloj = new THREE.Clock();
@@ -173,6 +221,7 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     if (escenarioActual === 'piramide' && iz < 0) return false;
     const inicio = INICIO_POR_ESCENARIO[escenarioActual];
     if (inicio && ix === inicio.x && iz === inicio.z) return false;
+    if (escenarioActual === 'batalla' && ix === SPAWNS_BATALLA.b.x && iz === SPAWNS_BATALLA.b.z) return false;
     if (ix === 0 && iz === 0) return false;
     if (escenarioActual === 'torre' && TRAMPOLINES_TORRE.some(([tx, tz]) => tx === ix && tz === iz)) return false;
     if (estructura.esMina(ix, iz) || estructura.estaCaido(ix, iz)) return false;
@@ -188,9 +237,20 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     puedeOcuparObstaculo
   );
 
-  /* ---------- Ticks de minas e items ---------- */
+  powerups = crearSistemaPowerups(
+    scene,
+    alturaFn,
+    RANGO_SPAWN_POR_ESCENARIO[escenarioActual],
+    (ix, iz) => yMundo(ix, iz),
+    puedeOcuparObstaculo
+  );
+
+  /* ---------- Ticks de minas, items y shrink (batalla) ---------- */
   let minaTick = 0;
   let itemTick  = 0;
+  let shrinkTick = 0;
+  let rangoActivo = 10;
+  let spawnActual = null; // override de posición inicial para batalla
 
   /* nubeCima se crea después de que las funciones auxiliares estén definidas */
 
@@ -204,6 +264,71 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     'z-index:9999', 'display:none',
   ].join(';');
   document.body.appendChild(divStats);
+
+  /* ---------- Juice: estilos + HUD de power-ups ---------- */
+  if (!document.getElementById('estilos-juice')) {
+    const s = document.createElement('style');
+    s.id = 'estilos-juice';
+    s.textContent = `
+      @keyframes flotarPuntos {
+        0%   { transform: translate(-50%, 0) scale(0.8); opacity: 0; }
+        15%  { transform: translate(-50%, -6px) scale(1.12); opacity: 1; }
+        100% { transform: translate(-50%, -50px) scale(1); opacity: 0; }
+      }
+      .puntos-flotantes {
+        position: fixed; pointer-events: none; z-index: 60;
+        font: 700 22px/1 system-ui, sans-serif; color: #fff; white-space: nowrap;
+        text-shadow: 0 2px 6px rgba(0,0,0,.6);
+        animation: flotarPuntos 0.9s ease-out forwards;
+      }
+      .puntos-flotantes--bonus { color: #ffe14d; }
+      .jugador-etiqueta {
+        position: fixed; transform: translate(-50%, -100%); pointer-events: none; z-index: 50;
+        font: 700 12px/1.6 system-ui, sans-serif; color: #fff; white-space: nowrap;
+        background: rgba(0,0,0,0.45); padding: 1px 7px; border-radius: 6px;
+        text-shadow: 0 1px 3px rgba(0,0,0,0.9); display: none;
+      }
+      .jugador-etiqueta--local { color: #ffe14d; }
+      #hud-powerups {
+        position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%);
+        display: flex; gap: 10px; z-index: 40; pointer-events: none;
+      }
+      .pw-badge {
+        display: flex; align-items: center; gap: 6px;
+        background: rgba(0,0,0,.45); color: #fff;
+        font: 600 14px/1 system-ui, sans-serif;
+        padding: 7px 12px; border-radius: 999px;
+      }
+      .pw-badge .ico { font-size: 18px; }
+    `;
+    document.head.appendChild(s);
+  }
+
+  const divPowerups = document.createElement('div');
+  divPowerups.id = 'hud-powerups';
+  document.body.appendChild(divPowerups);
+
+  function actualizarPowerupHUD() {
+    const b = [];
+    if (escudoActivo)     b.push('<div class="pw-badge"><span class="ico">🛟</span>Escudo</div>');
+    if (plumaRestante > 0) b.push(`<div class="pw-badge"><span class="ico">🪽</span>${Math.ceil(plumaRestante)}s</div>`);
+    if (imanRestante > 0)  b.push(`<div class="pw-badge"><span class="ico">🧲</span>${Math.ceil(imanRestante)}s</div>`);
+    divPowerups.innerHTML = b.join('');
+  }
+
+  function mostrarPuntosFlotantes(texto, mundoPos, bonus = false) {
+    const v = mundoPos.clone().project(camera);
+    const rect = renderer.domElement.getBoundingClientRect();
+    const sx = rect.left + (v.x * 0.5 + 0.5) * rect.width;
+    const sy = rect.top + (-v.y * 0.5 + 0.5) * rect.height;
+    const el = document.createElement('div');
+    el.className = 'puntos-flotantes' + (bonus ? ' puntos-flotantes--bonus' : '');
+    el.textContent = texto;
+    el.style.left = `${sx}px`;
+    el.style.top = `${sy}px`;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 950);
+  }
 
   let _perfFrames = 0;
   let _perfAcum   = 0;
@@ -365,6 +490,7 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
 
   /* ---------- Game Over ---------- */
   function mostrarGameOver() {
+    detenerMusica();
     const overlay = document.getElementById('game-over');
     if (!overlay) return;
     const elScore = document.getElementById('go-score');
@@ -382,6 +508,8 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
   /* ---------- Victoria ---------- */
   function mostrarVictoria() {
     cronometroActivo = false;
+    detenerMusica();
+    sonidoVictoria();
 
     const overlay = document.getElementById('victoria');
     if (!overlay) return;
@@ -403,10 +531,28 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     if (typeof alGanar === 'function') alGanar({ score, tiempo: cronometroT, nombre });
   }
 
+  /* ---------- Victoria en batalla (rival eliminado) ---------- */
+  function mostrarVictoriaBatalla() {
+    cronometroActivo = false;
+    detenerMusica();
+    sonidoVictoria();
+    const overlay = document.getElementById('victoria');
+    if (!overlay) return;
+    const scoreEl = document.getElementById('victoria-score');
+    const tiempoEl = document.getElementById('victoria-tiempo');
+    const tituloEl = overlay.querySelector('.victoria__titulo');
+    if (tituloEl) tituloEl.textContent = '¡Ganaste la batalla!';
+    if (scoreEl)  scoreEl.textContent  = score;
+    if (tiempoEl) tiempoEl.textContent = formatearTiempo(cronometroT);
+    const mejorEl = document.getElementById('victoria-mejor');
+    if (mejorEl) mejorEl.textContent = score;
+    overlay.hidden = false;
+  }
+
   /* ---------- Respawn ---------- */
   function respawnJugador() {
     muerto = false;
-    const inicio = INICIO_POR_ESCENARIO[escenarioActual] || { x: 0, z: 9 };
+    const inicio = spawnActual || INICIO_POR_ESCENARIO[escenarioActual] || { x: 0, z: 9 };
     celdaX = inicio.x;
     celdaZ = inicio.z;
     saltando = false;
@@ -433,11 +579,11 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     if (!elTiempo) return;
     const cap = Math.max(1, Math.floor(estructura.tapasCount * (CAP_MINAS_PCT[dificultadActual] ?? 0.45)));
     const pct = Math.min(1, estructura.minasCount / cap);
-    // Blanco → amarillo → naranja → rojo
+    // Negro → amarillo → naranja → rojo
     let r, g, b;
     if (pct < 0.33) {
       const t = pct / 0.33;
-      r = 255; g = Math.round(lerp(255, 200, t)); b = Math.round(lerp(255, 0, t));
+      r = Math.round(lerp(26, 255, t)); g = Math.round(lerp(26, 200, t)); b = Math.round(lerp(26, 0, t));
     } else if (pct < 0.66) {
       const t = (pct - 0.33) / 0.33;
       r = 255; g = Math.round(lerp(200, 100, t)); b = 0;
@@ -517,39 +663,146 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     spawnIslasLaterales();
   }
 
+  /* ---------- Contracción del anillo (batalla) ---------- */
+  function tickShrink(delta) {
+    if (rangoActivo <= 0) return;
+    shrinkTick += delta;
+    const intervalo = INTERVALO_SHRINK[dificultadActual] ?? 15;
+    if (shrinkTick < intervalo) return;
+    shrinkTick = 0;
+
+    const r = rangoActivo;
+    for (let ix = -r; ix <= r; ix++) {
+      for (let iz = -r; iz <= r; iz++) {
+        if (Math.max(Math.abs(ix), Math.abs(iz)) === r) {
+          estructura.desprenderCubo(ix, iz);
+        }
+      }
+    }
+    rangoActivo--;
+  }
+
   /* ---------- Colisión con mina / agua ---------- */
-  function perderVida(desdeMina, x, z) {
-    if (desdeMina) estructura.eliminarCubo(x, z);
+  // causa: 'mina' | 'agua' | 'cubo'
+  function perderVida(causa, x, z) {
+    if (causa === 'mina') estructura.eliminarCubo(x, z);
+
+    function retrocederAgua() {
+      if (escenarioActual !== 'piramide') return;
+      const intervalo = INTERVALO_AGUA[modoActual] || INTERVALO_AGUA.carrera;
+      nivelAgua = Math.max(0, Math.min(nivelAgua - BAJADA_AGUA_MUERTE, 4));
+      aguaT = nivelAgua * intervalo;
+      actualizarBarraAgua();
+    }
+
+    // El escudo absorbe el golpe: no cuesta vida y reaparece en la salida.
+    if (escudoActivo) {
+      escudoActivo = false;
+      escudoMesh.visible = false;
+      actualizarPowerupHUD();
+      sonidoEscudo();
+      if (causa === 'agua') retrocederAgua();
+      respawnJugador();
+      return;
+    }
+
     vidas--;
     actualizarVidas();
+    sonidoMina();
     muerto = true;
+    racha = 0;
+    rachaRestante = 0;
     bob.visible = false;
     explosionActual = crearExplosion(scene, jugador.position.clone());
+    if (causa === 'agua') retrocederAgua();
 
     if (vidas <= 0) {
+      sonidoGameOver();
+      if (escenarioActual === 'batalla' && typeof alPerder === 'function') alPerder();
       setTimeout(() => mostrarGameOver(), 900);
     } else {
       setTimeout(() => respawnJugador(), 900);
     }
   }
 
-  function procesarAterrizaje(x, z) {
+  /* ---------- Racha escalonada ---------- */
+  function multiplicadorRacha() {
+    if (racha >= 6) return 3;
+    if (racha >= 3) return 2;
+    return 1;
+  }
+
+  /* ---------- Recoger coleccionable en una celda ---------- */
+  function recogerEnCelda(x, z) {
     const pts = coleccionables.recoger(x, z);
-    if (pts !== null) {
-      racha++;
-      const mult = racha >= 3 ? 2 : 1;
-      score += pts * mult;
-      actualizarScore();
-      if (escenarioActual === 'piramide') {
-        const intervalo = INTERVALO_AGUA[modoActual] || INTERVALO_AGUA.carrera;
-        aguaT = Math.max(0, aguaT - intervalo);
-        nivelAgua = Math.floor(aguaT / intervalo);
-        actualizarBarraAgua();
-      } else {
-        actualizarSaciedad(pts);
+    if (pts === null) return false;
+    racha++;
+    rachaRestante = RACHA_TIMEOUT;
+    const mult = multiplicadorRacha();
+    const ganado = pts * mult;
+    score += ganado;
+    actualizarScore();
+    sonidoRecoger();
+    mostrarPuntosFlotantes(
+      mult > 1 ? `+${ganado} x${mult}` : `+${ganado}`,
+      new THREE.Vector3(x * 2, yMundo(x, z) + 2.2, z * 2),
+      mult > 1
+    );
+    if (escenarioActual === 'piramide') {
+      const intervalo = INTERVALO_AGUA[modoActual] || INTERVALO_AGUA.carrera;
+      aguaT = Math.max(0, aguaT - intervalo);
+      nivelAgua = Math.floor(aguaT / intervalo);
+      actualizarBarraAgua();
+    } else if (escenarioActual !== 'batalla') {
+      actualizarSaciedad(pts);
+    }
+    return true;
+  }
+
+  /* ---------- Aplicar un power-up recogido ---------- */
+  function aplicarPowerup(tipo, x, z) {
+    sonidoPowerup();
+    const pos = new THREE.Vector3(x * 2, yMundo(x, z) + 2.6, z * 2);
+    if (tipo.id === 'escudo') {
+      escudoActivo = true;
+      escudoMesh.visible = true;
+      mostrarPuntosFlotantes('🛟 Escudo', pos, true);
+    } else if (tipo.id === 'pluma') {
+      plumaRestante = tipo.dur;
+      mostrarPuntosFlotantes('🪽 Doble salto', pos, true);
+    } else if (tipo.id === 'iman') {
+      imanRestante = tipo.dur;
+      mostrarPuntosFlotantes('🧲 Imán', pos, true);
+    }
+    actualizarPowerupHUD();
+  }
+
+  /* ---------- Bonus al coronar la cima ---------- */
+  function otorgarBonusVictoria() {
+    const bonusCima   = 500;
+    const bonusTiempo  = Math.max(0, Math.round((300 - cronometroT)) * 2);
+    const bonusVidas   = vidas * 150;
+    const total = bonusCima + bonusTiempo + bonusVidas;
+    score += total;
+    actualizarScore();
+    mostrarPuntosFlotantes(`¡Cima! +${total}`, new THREE.Vector3(0, yMundo(0, 0) + 3, 0), true);
+  }
+
+  function procesarAterrizaje(x, z) {
+    squashT = 1; // animación de aterrizaje
+
+    // Power-up en la celda
+    const tipoPw = powerups.recoger(x, z);
+    if (tipoPw) aplicarPowerup(tipoPw, x, z);
+
+    // Coleccionable en la celda
+    recogerEnCelda(x, z);
+
+    // Imán: también recoge los coleccionables de las 4 celdas vecinas
+    if (imanRestante > 0) {
+      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        recogerEnCelda(x + dx, z + dz);
       }
-    } else {
-      racha = 0;
     }
 
     if (obstaculos.consumirHierba(x, z)) saltoLentoPendiente = true;
@@ -559,7 +812,7 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     if (!muerto && alturaEfectiva(x, z) < alturaSaltoDesde) obstaculos.invertirTortugas();
 
     if (estructura.esMina(x, z)) {
-      perderVida(true, x, z);
+      perderVida('mina', x, z);
       return;
     }
 
@@ -570,9 +823,10 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
 
     actualizarHUD();
 
-    /* Victoria: en pirámide basta la cima; en los otros hace falta la nube */
-    const enCima = alturaEfectiva(x, z) >= NIVEL_MAXIMO_POR_ESCENARIO[escenarioActual];
+    /* Victoria: en pirámide basta la cima; en los otros hace falta la nube; en batalla no hay cima */
+    const enCima = escenarioActual !== 'batalla' && alturaEfectiva(x, z) >= NIVEL_MAXIMO_POR_ESCENARIO[escenarioActual];
     if (enCima && (escenarioActual === 'piramide' || satisfecho)) {
+      otorgarBonusVictoria();
       mostrarVictoria();
     }
   }
@@ -587,6 +841,10 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
   document.addEventListener('keydown', (event) => {
     if (event.key === 'F3') {
       divStats.style.display = divStats.style.display === 'none' ? 'block' : 'none';
+      return;
+    }
+    if (event.key === 'v' || event.key === 'V') {
+      if (vistaJuego.classList.contains('activa')) modoFPS = !modoFPS;
       return;
     }
     if (!vistaJuego.classList.contains('activa')) return;
@@ -624,7 +882,8 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
 
     if (alturaFn(nx, nz) <= 0) return;
 
-    const maxSubida = impulsoSalto > 0 ? 3 : (MAX_SUBIDA_POR_ESCENARIO[escenarioActual] ?? 1);
+    const bonoPluma = plumaRestante > 0 ? 1 : 0;
+    const maxSubida = impulsoSalto > 0 ? 3 : ((MAX_SUBIDA_POR_ESCENARIO[escenarioActual] ?? 1) + bonoPluma);
     if (alturaEfectiva(nx, nz) - alturaEfectiva(celdaX, celdaZ) > maxSubida) return;
 
     if (dx ===  1) patoRotTarget =  0;
@@ -648,6 +907,8 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     impulsoSalto = 0;
     saltando = true;
     saltoT = 0;
+    sonidoSalto();
+    iniciarMusica();
 
     if (!cronometroActivo) cronometroActivo = true;
   });
@@ -675,6 +936,8 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
   crearTrampolinesTorre();
   preSpawnItems();
   actualizarBarraAgua();
+  actualizarPowerupHUD();
+  powerupTick = INTERVALO_POWERUP - 6;
 
   renderer.setAnimationLoop(animate);
 
@@ -693,32 +956,47 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     while (rotDiff < -Math.PI) rotDiff += Math.PI * 2;
     jugador.rotation.y += rotDiff * Math.min(1, delta * 12);
 
-    // Rotación suave del ángulo de cámara
-    let diff = camTarget - camAngle;
-    while (diff >  Math.PI) diff -= Math.PI * 2;
-    while (diff < -Math.PI) diff += Math.PI * 2;
-    camAngle += diff * Math.min(1, delta * 4);
+    if (modoFPS) {
+      // Cámara cercana: encima y detrás del pato, siguiendo su dirección
+      const detras = 3;
+      const alto   = 5;
+      const bx = -Math.cos(jugador.rotation.y) * detras;
+      const bz =  Math.sin(jugador.rotation.y) * detras;
+      const tx = jugador.position.x + bx;
+      const ty = jugador.position.y + alto;
+      const tz = jugador.position.z + bz;
+      camera.position.x += (tx - camera.position.x) * Math.min(1, delta * 8);
+      camera.position.y += (ty - camera.position.y) * Math.min(1, delta * 8);
+      camera.position.z += (tz - camera.position.z) * Math.min(1, delta * 8);
+      camera.lookAt(jugador.position.x, jugador.position.y + 1, jugador.position.z);
+    } else {
+      // Rotación suave del ángulo de cámara
+      let diff = camTarget - camAngle;
+      while (diff >  Math.PI) diff -= Math.PI * 2;
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      camAngle += diff * Math.min(1, delta * 4);
 
-    // Punto de seguimiento: XZ sigue el movimiento horizontal con lag ligero;
-    // Y sigue la altura de destino (no el pico del arco) para evitar el salto visual
-    const groundY = saltando ? saltoHasta.y : jugador.position.y;
-    camLookX += (jugador.position.x - camLookX) * Math.min(1, delta * 8);
-    camLookZ += (jugador.position.z - camLookZ) * Math.min(1, delta * 8);
-    camLookY += (groundY            - camLookY) * Math.min(1, delta * 5);
+      // Punto de seguimiento: XZ sigue el movimiento horizontal con lag ligero;
+      // Y sigue la altura de destino (no el pico del arco) para evitar el salto visual
+      const groundY = saltando ? saltoHasta.y : jugador.position.y;
+      camLookX += (jugador.position.x - camLookX) * Math.min(1, delta * 8);
+      camLookZ += (jugador.position.z - camLookZ) * Math.min(1, delta * 8);
+      camLookY += (groundY            - camLookY) * Math.min(1, delta * 5);
 
-    // Posición deseada de la cámara
-    const camDist = 9;
-    const camH    = camDist * Math.tan(35 * Math.PI / 180);
-    const desX = camLookX + Math.cos(camAngle) * camDist;
-    const desY = camLookY + camH;
-    const desZ = camLookZ + Math.sin(camAngle) * camDist;
+      // Posición deseada de la cámara
+      const camDist = 9;
+      const camH    = camDist * Math.tan(35 * Math.PI / 180);
+      const desX = camLookX + Math.cos(camAngle) * camDist;
+      const desY = camLookY + camH;
+      const desZ = camLookZ + Math.sin(camAngle) * camDist;
 
-    // Lerp de la posición de la cámara para transición extra suave
-    camera.position.x += (desX - camera.position.x) * Math.min(1, delta * 10);
-    camera.position.y += (desY - camera.position.y) * Math.min(1, delta * 10);
-    camera.position.z += (desZ - camera.position.z) * Math.min(1, delta * 10);
+      // Lerp de la posición de la cámara para transición extra suave
+      camera.position.x += (desX - camera.position.x) * Math.min(1, delta * 10);
+      camera.position.y += (desY - camera.position.y) * Math.min(1, delta * 10);
+      camera.position.z += (desZ - camera.position.z) * Math.min(1, delta * 10);
 
-    camera.lookAt(camLookX, camLookY, camLookZ);
+      camera.lookAt(camLookX, camLookY, camLookZ);
+    }
 
     const estaActivo = vistaJuego.classList.contains('activa');
     if (!estaActivo) { renderer.render(scene, camera); return; }
@@ -734,7 +1012,7 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
         saltando = false;
         jugador.position.set(celdaX * 2, saltoHasta.y, celdaZ * 2);
         if (typeof alMoverJugador === 'function') {
-          alMoverJugador(jugador.position);
+          alMoverJugador({ x: jugador.position.x, y: jugador.position.y, z: jugador.position.z, rotationY: jugador.rotation.y });
         }
         procesarAterrizaje(celdaX, celdaZ);
       }
@@ -748,7 +1026,27 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     if (cronometroActivo) {
       if (modoActual !== 'carrera') tickMinas(delta);
       tickItems(delta);
+      if (escenarioActual === 'batalla') tickShrink(delta);
       actualizarCronometroColor();
+
+      // Aparición periódica de power-ups (máx. 2 en el tablero)
+      powerupTick += delta;
+      if (powerupTick >= INTERVALO_POWERUP) {
+        powerupTick = 0;
+        if (powerups.cantidad < 2) powerups.spawnAleatorio();
+      }
+    }
+
+    // Temporizadores de power-ups y de la racha
+    if (cronometroActivo && !muerto) {
+      let hudSucio = false;
+      if (plumaRestante > 0) { plumaRestante = Math.max(0, plumaRestante - delta); hudSucio = true; }
+      if (imanRestante  > 0) { imanRestante  = Math.max(0, imanRestante  - delta); hudSucio = true; }
+      if (hudSucio) actualizarPowerupHUD();
+      if (rachaRestante > 0) {
+        rachaRestante = Math.max(0, rachaRestante - delta);
+        if (rachaRestante === 0) racha = 0;
+      }
     }
 
     if (cronometroActivo && escenarioActual === 'piramide' && planoAgua) {
@@ -760,19 +1058,34 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
       actualizarBarraAgua();
 
       if (!muerto && alturaEfectiva(celdaX, celdaZ) <= nivelAgua) {
-        perderVida(false);
-        nivelAgua = Math.max(0, Math.min(nivelAgua - BAJADA_AGUA_MUERTE, 4));
-        aguaT = nivelAgua * intervalo;
-        actualizarBarraAgua();
+        perderVida('agua');
       }
     }
 
     if (!muerto && !saltando && estructura.estaCaido(celdaX, celdaZ)) {
-      perderVida(false);
+      perderVida('cubo');
     }
 
     coleccionables.animar(delta);
+    powerups.animar(delta);
     actualizarTrampolines(delta);
+
+    // Luz focal sigue al pato
+    luzFocal.position.set(jugador.position.x, jugador.position.y + 6, jugador.position.z + 4);
+
+    // Squash de aterrizaje
+    if (squashT > 0) {
+      squashT = Math.max(0, squashT - delta * 4);
+      const s = squashT;
+      pato.scale.set(1.4 * (1 + 0.15 * s), 1.4 * (1 - 0.3 * s), 1.4 * (1 + 0.15 * s));
+    }
+
+    // Aro de escudo
+    if (escudoMesh.visible) {
+      escudoMesh.rotation.z += delta * 2.5;
+      const p = 1 + Math.sin(performance.now() * 0.006) * 0.08;
+      escudoMesh.scale.setScalar(p);
+    }
     obstaculos.animar(delta, {
       celdaX: saltando ? Math.round(saltoDesde.x / 2) : celdaX,
       celdaZ: saltando ? Math.round(saltoDesde.z / 2) : celdaZ,
@@ -790,10 +1103,33 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
 
     renderer.render(scene, camera);
     actualizarStats(delta);
+
+    // Dificultad automática progresiva
+    if (dificultadAuto && cronometroActivo && !muerto) {
+      const nivelMax = NIVEL_MAXIMO_POR_ESCENARIO[escenarioActual] ?? 11;
+      const pct = alturaEfectiva(celdaX, celdaZ) / nivelMax;
+      const nuevaDif = pct < 0.33 ? 'facil' : pct < 0.66 ? 'normal' : 'dificil';
+      if (nuevaDif !== dificultadAnteriorAuto) {
+        dificultadActual = nuevaDif;
+        dificultadAnteriorAuto = nuevaDif;
+        obstaculos.configurar(dificultadActual);
+      }
+    }
+
+    // Etiquetas de nombres sobre los patos
+    remotos.forEach((avatar, id) => {
+      const etiq = etiquetasRemotas.get(id);
+      if (etiq) proyectarEtiqueta(etiq, avatar.position, 2.8);
+    });
+    if (etiquetaLocal) proyectarEtiqueta(etiquetaLocal, jugador.position, 2.2);
   }
 
   /* ---------- Jugadores remotos ---------- */
-  const remotos = new Map();
+  const remotos        = new Map();
+  const etiquetasRemotas = new Map();
+  let etiquetaLocal    = null;
+  let dificultadAuto   = false;
+  let dificultadAnteriorAuto = '';
 
   function colorPorId(id) {
     let hash = 0;
@@ -801,41 +1137,75 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     return new THREE.Color(`hsl(${hash}, 80%, 55%)`);
   }
 
+  function crearEtiqueta(nombre, esLocal = false) {
+    const div = document.createElement('div');
+    div.className = 'jugador-etiqueta' + (esLocal ? ' jugador-etiqueta--local' : '');
+    div.textContent = nombre || '?';
+    document.body.appendChild(div);
+    return div;
+  }
+
+  function proyectarEtiqueta(div, pos3d, offsetY = 0.9) {
+    const v = new THREE.Vector3(pos3d.x, pos3d.y + offsetY, pos3d.z).project(camera);
+    if (v.z > 1) { div.style.display = 'none'; return; }
+    div.style.display = '';
+    div.style.left = ((v.x + 1) / 2 * window.innerWidth) + 'px';
+    div.style.top  = (-(v.y - 1) / 2 * window.innerHeight) + 'px';
+  }
+
   function agregarJugadorRemoto(remoto) {
     if (!remoto || remotos.has(remoto.id)) return;
-    const avatar = new THREE.Mesh(
-      new THREE.BoxGeometry(0.9, 0.9, 0.9),
-      new THREE.MeshPhongMaterial({ color: colorPorId(remoto.id) })
-    );
-    avatar.position.set(remoto.x || 0, (remoto.y || 0) + 1.5, remoto.z || 0);
-    scene.add(avatar);
-    remotos.set(remoto.id, avatar);
+    const colorCuerpo = remoto.colorCuerpo ?? colorPorId(remoto.id).getHex();
+    const colorOjo    = remoto.colorOjo    ?? 0x1a1a2e;
+    const patoRemoto = crearPato(colorCuerpo, colorOjo);
+    patoRemoto.position.y = 1;
+    patoRemoto.scale.setScalar(1.4);
+    const container = new THREE.Group();
+    container.add(patoRemoto);
+    container.position.set(remoto.x || 0, remoto.y || 0, remoto.z || 0);
+    scene.add(container);
+    remotos.set(remoto.id, container);
+    etiquetasRemotas.set(remoto.id, crearEtiqueta(remoto.nombre));
   }
 
   function moverJugadorRemoto(remoto) {
     const avatar = remotos.get(remoto.id);
-    if (avatar) avatar.position.set(remoto.x, remoto.y + 1.5, remoto.z);
+    if (!avatar) return;
+    avatar.position.set(remoto.x, remoto.y, remoto.z);
+    if (remoto.rotationY != null) avatar.rotation.y = remoto.rotationY;
   }
 
   function quitarJugadorRemoto(id) {
     const avatar = remotos.get(id);
     if (avatar) { scene.remove(avatar); remotos.delete(id); }
+    const etiq = etiquetasRemotas.get(id);
+    if (etiq) { etiq.remove(); etiquetasRemotas.delete(id); }
+  }
+
+  function setNombreJugador(nombre) {
+    if (!etiquetaLocal) etiquetaLocal = crearEtiqueta(nombre, true);
+    else etiquetaLocal.textContent = nombre;
   }
 
   /* ---------- Control de escenario ---------- */
-  function reiniciar(tipo = 'piramide', colorHex = patoColor, colorOjo = patoOjoColor, dificultad = dificultadActual, modo = 'carrera') {
+  function reiniciar(tipo = 'piramide', colorHex = patoColor, colorOjo = patoOjoColor, dificultad = dificultadActual, modo = 'carrera', semilla = Date.now(), spawn = null) {
     estructura.limpiar();
     coleccionables.limpiar();
     obstaculos.limpiar();
+    if (powerups) powerups.limpiar();
     limpiarTrampolines();
+    detenerMusica();
     if (explosionActual) { explosionActual = null; }
 
-    escenarioActual  = tipo;
-    patoColor        = colorHex;
-    patoOjoColor     = colorOjo;
-    dificultadActual = dificultad || 'normal';
-    modoActual       = modo || 'carrera';
+    escenarioActual     = tipo;
+    patoColor           = colorHex;
+    patoOjoColor        = colorOjo;
+    dificultadAuto      = dificultad === 'auto';
+    dificultadActual    = dificultadAuto ? 'facil' : (dificultad || 'normal');
+    dificultadAnteriorAuto = dificultadActual;
+    modoActual          = modo || 'carrera';
 
+    setSeed(semilla);
     estructura = crearEstructura(scene, tipo, dificultadActual, CELDAS_PROTEGIDAS);
     alturaFn = estructura.alturaFn;
     elevacion = estructura.elevacion || 0;
@@ -855,8 +1225,24 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
       puedeOcuparObstaculo
     );
     obstaculos.configurar(dificultadActual);
+    powerups = crearSistemaPowerups(
+      scene,
+      alturaFn,
+      RANGO_SPAWN_POR_ESCENARIO[tipo] || 5,
+      (ix, iz) => yMundo(ix, iz),
+      puedeOcuparObstaculo
+    );
     minaTick = 0;
     itemTick  = 0;
+    shrinkTick = 0;
+    rangoActivo = 10;
+    powerupTick = INTERVALO_POWERUP - 6; // primer power-up a los ~6s
+    escudoActivo  = false;
+    plumaRestante = 0;
+    imanRestante  = 0;
+    rachaRestante = 0;
+    squashT = 0;
+    escudoMesh.visible = false;
 
     saciedadMax = SACIEDAD_MAX_POR_MODO[modoActual] ?? SACIEDAD_MAX_POR_MODO.carrera;
     saciedad   = 0;
@@ -864,7 +1250,8 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     nubeCimaT  = 0;
     if (nubeCima) { scene.remove(nubeCima); nubeCima = null; }
 
-    const inicio = INICIO_POR_ESCENARIO[tipo] || { x: 0, z: 9 };
+    spawnActual = spawn || null;
+    const inicio = spawnActual || INICIO_POR_ESCENARIO[tipo] || { x: 0, z: 9 };
     celdaX = inicio.x;
     celdaZ = inicio.z;
     saltando = false;
@@ -906,6 +1293,23 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     patoRotTarget = Math.atan2(inicio.z, -inicio.x);
     jugador.rotation.y = patoRotTarget;
 
+    const esMulti = dificultadAuto; // multiplayer usa dificultad 'auto'
+    modoFPS = !esMulti && tipo !== 'arena' && tipo !== 'batalla';
+    if (tipo === 'arena' || tipo === 'batalla') {
+      camera.position.set(0, 36, 28);
+      camera.lookAt(0, 0, 0);
+    } else if (esMulti) {
+      // Cámara lejana para multijugador en cualquier escenario
+      camera.position.set(22, 28, 22);
+      camera.lookAt(0, 8, 0);
+    } else {
+      camera.position.set(
+        celdaX * 2 - Math.cos(patoRotTarget) * 3,
+        yMundo(celdaX, celdaZ) + 5,
+        celdaZ * 2 + Math.sin(patoRotTarget) * 3
+      );
+    }
+
     document.body.style.background = FONDO_POR_ESCENARIO[tipo] || FONDO_POR_ESCENARIO.piramide;
 
     const overlayGO = document.getElementById('game-over');
@@ -922,12 +1326,15 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     obstaculos.poblar({ celdaX, celdaZ });
     actualizarBarraAgua();
     actualizarBarraSaciedad();
+    actualizarPowerupHUD();
     const elBar = document.getElementById('hud-saciedad-relleno');
     if (elBar) elBar.classList.remove('saciedad__relleno--llena');
   }
 
-  function pausarCronometro()   { cronometroActivo = false; }
-  function reanudarCronometro() { if (cronometroT > 0 && !muerto) cronometroActivo = true; }
+  function pausarCronometro()   { cronometroActivo = false; detenerMusica(); }
+  function reanudarCronometro() {
+    if (cronometroT > 0 && !muerto) { cronometroActivo = true; iniciarMusica(); }
+  }
 
   return {
     scene,
@@ -935,8 +1342,10 @@ export async function iniciarEscena({ alMoverJugador, alGanar } = {}) {
     agregarJugadorRemoto,
     moverJugadorRemoto,
     quitarJugadorRemoto,
+    mostrarVictoriaBatalla,
     reiniciar,
     pausarCronometro,
     reanudarCronometro,
+    setNombreJugador,
   };
 }
