@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { rand } from '../util/rng.js';
 
 const CONFIG = {
   facil:   { tortugas: 1, rango: 2, paso: 1.5, hierbas: 6 },
@@ -96,8 +97,8 @@ export function crearSistemaObstaculos(scene, alturaFn, rango, baseYFn, puedeOcu
 
   function celdaAleatoria(ctx) {
     for (let i = 0; i < 40; i++) {
-      const ix = Math.floor(Math.random() * (rango * 2 + 1)) - rango;
-      const iz = Math.floor(Math.random() * (rango * 2 + 1)) - rango;
+      const ix = Math.floor(rand() * (rango * 2 + 1)) - rango;
+      const iz = Math.floor(rand() * (rango * 2 + 1)) - rango;
       if (!libre(ix, iz, ctx)) continue;
       if (ctx.celdaX !== undefined && Math.abs(ix - ctx.celdaX) + Math.abs(iz - ctx.celdaZ) < 2) continue;
       return { ix, iz };
@@ -116,8 +117,8 @@ export function crearSistemaObstaculos(scene, alturaFn, rango, baseYFn, puedeOcu
       if (!accesible(x, centro.iz, ctx)) return false;
     }
 
-    const dir = Math.random() < 0.5 ? 1 : -1;
-    const ix = minX + Math.floor(Math.random() * (maxX - minX + 1));
+    const dir = rand() < 0.5 ? 1 : -1;
+    const ix = minX + Math.floor(rand() * (maxX - minX + 1));
     const grupo = crearTortuga();
     const baseY = baseYFn(ix, centro.iz) + SOBRE_CUBO;
     grupo.position.set(ix * 2, baseY + 0.1, centro.iz * 2);

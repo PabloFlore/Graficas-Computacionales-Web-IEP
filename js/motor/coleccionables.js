@@ -1,11 +1,23 @@
 import * as THREE from 'three';
+import { rand } from '../util/rng.js';
 
 const TIPOS = [
-  { id: 'manzana',   color: 0xe74c3c, puntos: 10 },
-  { id: 'zanahoria', color: 0xff7f00, puntos: 15 },
-  { id: 'semilla',   color: 0x7d5a1e, puntos:  5 },
-  { id: 'dulce',     color: 0xfd79a8, puntos: 20 },
+  { id: 'semilla',   color: 0x7d5a1e, puntos:  5, peso: 35 },
+  { id: 'manzana',   color: 0xe74c3c, puntos: 10, peso: 30 },
+  { id: 'zanahoria', color: 0xff7f00, puntos: 15, peso: 20 },
+  { id: 'dulce',     color: 0xfd79a8, puntos: 20, peso: 10 },
 ];
+
+// Elige un tipo ponderando por rareza: los de mayor valor salen menos.
+function elegirTipo() {
+  const total = TIPOS.reduce((s, t) => s + t.peso, 0);
+  let r = rand() * total;
+  for (const t of TIPOS) {
+    r -= t.peso;
+    if (r <= 0) return t;
+  }
+  return TIPOS[0];
+}
 
 function crearManzana(color) {
   const g = new THREE.Group();
@@ -72,28 +84,28 @@ export function crearSistemaColeccionables(scene, alturaFn, rango, baseYFn) {
     if (activos.has(key)) return;
     const h = alturaFn(ix, iz);
     if (h <= 0) return;
-    const tipo = TIPOS[Math.floor(Math.random() * TIPOS.length)];
+    const tipo = elegirTipo();
     const grupo = crearMesh(tipo);
     const baseY = (baseYFn ? baseYFn(ix, iz) + 1 : h * 2) + 0.8;
     grupo.position.set(ix * 2, baseY, iz * 2);
     grupo.scale.setScalar(2.2);
     scene.add(grupo);
-    activos.set(key, { grupo, tipo, baseY, t: Math.random() * Math.PI * 2, vida: VIDA_ITEM });
+    activos.set(key, { grupo, tipo, baseY, t: rand() * Math.PI * 2, vida: VIDA_ITEM });
   }
 
   function spawnAleatorio() {
-    const ix = Math.floor(Math.random() * (rango * 2 + 1)) - rango;
-    const iz = Math.floor(Math.random() * (rango * 2 + 1)) - rango;
+    const ix = Math.floor(rand() * (rango * 2 + 1)) - rango;
+    const iz = Math.floor(rand() * (rango * 2 + 1)) - rango;
     spawn(ix, iz);
   }
 
   function spawnEnCuadrante(qx, qz) {
     const ix = qx > 0
-      ? Math.floor(Math.random() * (rango + 1))
-      : -(Math.floor(Math.random() * rango) + 1);
+      ? Math.floor(rand() * (rango + 1))
+      : -(Math.floor(rand() * rango) + 1);
     const iz = qz > 0
-      ? Math.floor(Math.random() * (rango + 1))
-      : -(Math.floor(Math.random() * rango) + 1);
+      ? Math.floor(rand() * (rango + 1))
+      : -(Math.floor(rand() * rango) + 1);
     spawn(ix, iz);
   }
 
