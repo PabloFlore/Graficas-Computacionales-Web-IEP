@@ -167,9 +167,20 @@ export async function cargarPuntuaciones(modo = modoActual) {
 
 /**
  * Envia una puntuacion al WebService PHP (INSERT en MySQL).
- * `datos` debe incluir: nombre, modo y nivel/movimientos o tiempoCima.
+ * Acepta `enviarPuntuacion({ nombre, modo, nivel, movimientos, tiempoCima })` y
+ * `enviarPuntuacion(nombre, puntos)`.
  */
-export async function enviarPuntuacion(datos) {
+export async function enviarPuntuacion(datos, puntos) {
+  if (typeof datos === 'string' || puntos !== undefined) {
+    const params = new URLSearchParams({ nombre: datos, score: String(puntos) });
+    const respuesta = await fetch(`${API_BASE}/WebServices.php?${params}`, { method: 'POST' });
+    if (!respuesta.ok) {
+      const texto = await respuesta.text().catch(() => '');
+      throw new Error(texto || 'No se pudo guardar la puntuación.');
+    }
+    return true;
+  }
+
   const respuesta = await fetch(`${API_BASE}/WebServices.php`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -198,4 +209,14 @@ export async function enviarPuntuacion(datos) {
   }
 
   return resultado || { ok: true };
+}
+
+export async function obtenerPuntuaciones(modo = modoActual) {
+  const respuesta = await fetch(
+    `${API_BASE}/puntuaciones.php?modo=${encodeURIComponent(normalizarModo(modo))}`
+  );
+  if (!respuesta.ok) {
+    throw new Error('Error al obtener datos');
+  }
+  return await respuesta.json();
 }

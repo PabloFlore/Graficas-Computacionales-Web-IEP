@@ -1,13 +1,31 @@
 import { iniciarPreferencias } from '../config/preferencias.js';
 import { cargarPuntuaciones } from '../red/puntuaciones.js';
+import { sonidoClick } from '../motor/sonidos.js';
+
+const OVERLAY_VISTAS = new Set(['vista-pausa', 'vista-configuraciones']);
 
 let alCambiarVista = null;
 let vistaActual = null;
 
+function notificarCambio(anterior, nueva, datos) {
+  if (typeof alCambiarVista === 'function') {
+    alCambiarVista(anterior, nueva, datos);
+  }
+}
+
 export function mostrarVista(id, datos = {}) {
   const anterior = vistaActual;
 
-  document.querySelectorAll('.vista').forEach((vista) => {
+  if (OVERLAY_VISTAS.has(id)) {
+    document.getElementById(id)?.classList.add('activa');
+    vistaActual = id;
+    notificarCambio(anterior, id, datos);
+    return;
+  }
+
+  OVERLAY_VISTAS.forEach((ov) => document.getElementById(ov)?.classList.remove('activa'));
+
+  document.querySelectorAll('.vista:not(#vista-pausa)').forEach((vista) => {
     vista.classList.toggle('activa', vista.id === id);
   });
 
@@ -17,9 +35,7 @@ export function mostrarVista(id, datos = {}) {
     cargarPuntuaciones();
   }
 
-  if (typeof alCambiarVista === 'function') {
-    alCambiarVista(anterior, id, datos);
-  }
+  notificarCambio(anterior, id, datos);
 }
 
 export function iniciarNavegacion({ alCambiarVista: callback } = {}) {
@@ -28,11 +44,25 @@ export function iniciarNavegacion({ alCambiarVista: callback } = {}) {
   mostrarVista('vista-menu');
 
   document.addEventListener('click', (event) => {
-    const boton = event.target.closest('[data-vista]');
-    if (boton) {
-      mostrarVista(boton.getAttribute('data-vista'), {
-        modo: boton.getAttribute('data-modo')
+    if (event.target.closest('[data-vista], button, .boton--multi-opcion')) {
+      sonidoClick();
+    }
+
+    const navBoton = event.target.closest('[data-vista]');
+    if (navBoton) {
+      mostrarVista(navBoton.getAttribute('data-vista'), {
+        modo: navBoton.getAttribute('data-modo')
       });
+    }
+
+    if (event.target.closest('[data-cerrar-overlay]')) {
+      OVERLAY_VISTAS.forEach((ov) => document.getElementById(ov)?.classList.remove('activa'));
+      const vistaBase = document.querySelector(
+        '.vista.activa:not(#vista-pausa):not(#vista-configuraciones)'
+      );
+      if (vistaBase) {
+        vistaActual = vistaBase.id;
+      }
     }
   });
 
@@ -44,10 +74,10 @@ export function iniciarNavegacion({ alCambiarVista: callback } = {}) {
     const juego = document.getElementById('vista-juego');
     const pausa = document.getElementById('vista-pausa');
 
-    if (juego.classList.contains('activa')) {
-      mostrarVista('vista-pausa');
-    } else if (pausa.classList.contains('activa')) {
+    if (pausa?.classList.contains('activa')) {
       mostrarVista('vista-juego');
+    } else if (juego?.classList.contains('activa')) {
+      mostrarVista('vista-pausa');
     }
   });
 }

@@ -39,20 +39,47 @@ export function iniciarMultijugador({
   alJugadoresArcade,
   alEmpujeConfirmado,
   alEmpujado,
-  alTeletransporteArcade
-}) {
+  alTeletransporteArcade,
+  alEncontrarPartida,
+  alRivalEliminado
+} = {}) {
   if (!socket) {
     console.error('Socket.IO no esta disponible: falta el cliente en index.html.');
     return;
   }
 
   socket.on('jugadores', (lista) => {
-    lista.forEach((jugador) => alEntrar(jugador));
+    if (typeof alEntrar === 'function') {
+      lista.forEach((jugador) => alEntrar(jugador));
+    }
   });
 
-  socket.on('jugador-entro', (jugador) => alEntrar(jugador));
-  socket.on('jugador-movio', (jugador) => alMover(jugador));
-  socket.on('jugador-salio', (id) => alSalir(id));
+  socket.on('jugador-entro', (jugador) => {
+    if (typeof alEntrar === 'function') {
+      alEntrar(jugador);
+    }
+  });
+  socket.on('jugador-movio', (jugador) => {
+    if (typeof alMover === 'function') {
+      alMover(jugador);
+    }
+  });
+  socket.on('jugador-salio', (id) => {
+    if (typeof alSalir === 'function') {
+      alSalir(id);
+    }
+  });
+  socket.on('rival-eliminado', (id) => {
+    if (typeof alRivalEliminado === 'function') {
+      alRivalEliminado(id);
+    }
+  });
+
+  socket.on('partida-encontrada', (datos) => {
+    if (typeof alEncontrarPartida === 'function') {
+      alEncontrarPartida(datos);
+    }
+  });
 
   socket.on('tu-jugador', (jugador) => {
     if (typeof alIdentificarse === 'function') {
@@ -251,11 +278,18 @@ export function reingresarJugador(nombre, modo = 'clasico') {
 }
 
 /**
- * Envia la posicion y la orientacion (rotY) del jugador local al servidor.
+ * Envia la posicion y la orientacion del jugador local al servidor.
  */
 export function enviarPosicion(posicion, rotY = 0) {
   if (socket) {
-    socket.emit('Posicion', { x: posicion.x, y: posicion.y, z: posicion.z, rotY });
+    const rotacion = Number.isFinite(posicion.rotationY) ? posicion.rotationY : rotY;
+    socket.emit('Posicion', {
+      x: posicion.x,
+      y: posicion.y,
+      z: posicion.z,
+      rotY: rotacion,
+      rotationY: rotacion
+    });
   }
 }
 
@@ -271,4 +305,25 @@ export function enviarEmpuje(objetivoId, dx, dz) {
 
   socket.emit('Empujar', { objetivoId, dx, dz });
   return true;
+}
+
+/** Entra en la cola de emparejamiento. */
+export function buscarPartida(nombre, colorCuerpo, colorOjo, dificultad) {
+  if (socket) {
+    socket.emit('BuscarPartida', { nombre, colorCuerpo, colorOjo, dificultad });
+  }
+}
+
+/** Sale de la cola sin iniciar partida. */
+export function cancelarBusqueda() {
+  if (socket) {
+    socket.emit('CancelarBusqueda');
+  }
+}
+
+/** Avisa al servidor que este jugador fue eliminado (vidas = 0 en batalla). */
+export function reportarEliminado() {
+  if (socket) {
+    socket.emit('BatallaEliminado');
+  }
 }

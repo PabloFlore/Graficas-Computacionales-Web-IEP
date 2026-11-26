@@ -1,7 +1,7 @@
 <?php
 
 define('DB_HOST', 'localhost');
-define('DB_PORT', '3306');
+define('DB_PORT', '3308');
 define('DB_USER', 'root');
 define('DB_PASS', '');
 define('DB_NAME', 'gcw');
@@ -13,7 +13,7 @@ function conexion() {
     return null;
   }
 
-  $mysqli->set_charset("utf8");
+  $mysqli->set_charset("utf8mb4");
 
   return $mysqli;
 }

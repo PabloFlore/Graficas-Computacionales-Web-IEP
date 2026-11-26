@@ -15,15 +15,13 @@ app.use('/api', (req, res) => {
       'Configura el alias /api siguiendo api/apache-alias.conf.'
   );
 });
-
 app.use(express.static(join(__dirname)));
-
-app.get('/', (req, res) => {
-  res.sendFile(join(__dirname, 'index.html'));
-});
+app.get('/', (req, res) => res.sendFile(join(__dirname, 'index.html')));
 
 const jugadores = new Map();
 const jugadoresArcade = new Map();
+const partidasBatalla = new Map();
+const cola = [];
 
 const NIVELES_DIFICULTAD = ['facil', 'normal', 'dificil'];
 let dificultad = 'normal';
@@ -70,6 +68,7 @@ const RADIO = 4;
 const RADIO_ARCADE = 7;
 const TOTAL_NIVELES = 3;
 const MODOS = { clasico: 'clasico', arcade: 'arcade' };
+const BATALLA = 'batalla';
 const RADIO_POR_MODO = { [MODOS.clasico]: RADIO, [MODOS.arcade]: RADIO_ARCADE };
 const SPAWNS_ARCADE = [
   { x: 0, z: RADIO_ARCADE },
@@ -840,17 +839,71 @@ function iniciarJugadorArcade(socket, nombre) {
   }
 }
 
+function quitarJugadorBatalla(socket) {
+  const idx = cola.findIndex((pendiente) => pendiente.socket.id === socket.id);
+  if (idx !== -1) {
+    cola.splice(idx, 1);
+  }
+
+  const jugador = partidasBatalla.get(socket.id);
+  if (!jugador) {
+    return;
+  }
+
+  socket.to(jugador.sala).emit('jugador-salio', socket.id);
+  partidasBatalla.delete(socket.id);
+  socket.leave(jugador.sala);
+  console.log('Jugador batalla salio:', jugador.nombre, socket.id);
+}
+
 function salirDeModo(socket) {
   const modo = socket.data.modo;
   if (modo === MODOS.arcade) {
     quitarJugadorArcade(socket);
   } else if (modo === MODOS.clasico) {
     quitarJugador(socket);
+  } else if (modo === BATALLA) {
+    quitarJugadorBatalla(socket);
   }
 
   socket.leave(MODOS.clasico);
   socket.leave(MODOS.arcade);
   socket.data.modo = null;
+}
+
+function emparejar(a, b) {
+  const sala = `${a.socket.id.slice(0, 4)}-${b.socket.id.slice(0, 4)}`;
+  const semilla = Math.floor(Math.random() * 0xFFFFFF);
+  const dificultad = a.dificultad || 'normal';
+
+  a.socket.join(sala);
+  b.socket.join(sala);
+
+  // Posiciones iniciales opuestas (tile*2 = coordenada mundo)
+  const spawnA = { tileX: 0, tileZ:  8, x: 0, y: 1, z:  16 };
+  const spawnB = { tileX: 0, tileZ: -8, x: 0, y: 1, z: -16 };
+
+  partidasBatalla.set(a.socket.id, {
+    id: a.socket.id, nombre: a.nombre, sala,
+    colorCuerpo: a.colorCuerpo, colorOjo: a.colorOjo, ...spawnA
+  });
+  partidasBatalla.set(b.socket.id, {
+    id: b.socket.id, nombre: b.nombre, sala,
+    colorCuerpo: b.colorCuerpo, colorOjo: b.colorOjo, ...spawnB
+  });
+
+  a.socket.emit('partida-encontrada', {
+    sala, semilla, dificultad,
+    spawn: { x: spawnA.tileX, z: spawnA.tileZ },
+    oponente: { id: b.socket.id, nombre: b.nombre, colorCuerpo: b.colorCuerpo, colorOjo: b.colorOjo, x: spawnB.x, y: spawnB.y, z: spawnB.z },
+  });
+  b.socket.emit('partida-encontrada', {
+    sala, semilla, dificultad,
+    spawn: { x: spawnB.tileX, z: spawnB.tileZ },
+    oponente: { id: a.socket.id, nombre: a.nombre, colorCuerpo: a.colorCuerpo, colorOjo: a.colorOjo, x: spawnA.x, y: spawnA.y, z: spawnA.z },
+  });
+
+  console.log(`Partida: ${a.nombre} vs ${b.nombre}  sala:${sala}  semilla:${semilla}`);
 }
 
 io.on('connection', (socket) => {
@@ -875,6 +928,8 @@ io.on('connection', (socket) => {
     if (modoAnterior && modoAnterior !== modo) {
       if (modoAnterior === MODOS.arcade) {
         quitarJugadorArcade(socket);
+      } else if (modoAnterior === BATALLA) {
+        quitarJugadorBatalla(socket);
       } else {
         quitarJugador(socket);
       }
@@ -908,6 +963,35 @@ io.on('connection', (socket) => {
     dificultad = nivel;
     io.emit('dificultad', estadoDificultad());
     console.log('Dificultad cambiada a:', dificultad, 'por', socket.id);
+  });
+
+  socket.on('BuscarPartida', (datos = {}) => {
+    const { nombre, colorCuerpo, colorOjo } = datos || {};
+    const dificultadBatalla = (datos && datos.dificultad) || 'normal';
+    if (cola.some(p => p.socket.id === socket.id)) return; // ya en cola
+
+    if (socket.data.modo === BATALLA) {
+      quitarJugadorBatalla(socket);
+    } else if (socket.data.modo) {
+      salirDeModo(socket);
+    }
+
+    cola.push({ socket, nombre, colorCuerpo, colorOjo, dificultad: dificultadBatalla });
+    socket.data.modo = BATALLA;
+    console.log(`En cola: ${nombre}  (${cola.length} esperando)`);
+
+    if (cola.length >= 2) {
+      const [a, b] = cola.splice(0, 2);
+      emparejar(a, b);
+    }
+  });
+
+  socket.on('CancelarBusqueda', () => {
+    const idx = cola.findIndex(p => p.socket.id === socket.id);
+    if (idx !== -1) {
+      cola.splice(idx, 1);
+      console.log(`Canceló búsqueda: ${socket.id}  (${cola.length} esperando)`);
+    }
   });
 
   socket.on('Posicion', (posicion) => {
@@ -953,11 +1037,28 @@ io.on('connection', (socket) => {
       return;
     }
 
-    const jugador = jugadores.get(socket.id);
-    if (!jugador) {
+    if (socket.data.modo === BATALLA) {
+      const jugadorBatalla = partidasBatalla.get(socket.id);
+      if (!jugadorBatalla) {
+        return;
+      }
+
+      jugadorBatalla.x = posicion.x;
+      jugadorBatalla.y = posicion.y;
+      jugadorBatalla.z = posicion.z;
+      jugadorBatalla.rotationY = posicion.rotationY;
+      socket.to(jugadorBatalla.sala).emit('jugador-movio', {
+        id: socket.id,
+        x: posicion.x,
+        y: posicion.y,
+        z: posicion.z,
+        rotationY: posicion.rotationY
+      });
       return;
     }
 
+    const jugador = jugadores.get(socket.id);
+    if (!jugador) return;
     jugador.x = posicion.x;
     jugador.y = posicion.y;
     jugador.z = posicion.z;
@@ -1154,8 +1255,20 @@ io.on('connection', (socket) => {
     });
   });
 
+  socket.on('BatallaEliminado', () => {
+    const jugador = partidasBatalla.get(socket.id);
+    if (!jugador) return;
+    socket.to(jugador.sala).emit('rival-eliminado', socket.id);
+    console.log(`Eliminado en batalla: ${jugador.nombre}  sala:${jugador.sala}`);
+  });
+
   socket.on('disconnect', () => {
-    if (socket.data.modo === MODOS.arcade) {
+    const idx = cola.findIndex(p => p.socket.id === socket.id);
+    if (idx !== -1) cola.splice(idx, 1);
+
+    if (socket.data.modo === BATALLA) {
+      quitarJugadorBatalla(socket);
+    } else if (socket.data.modo === MODOS.arcade) {
       quitarJugadorArcade(socket);
     } else if (socket.data.modo === MODOS.clasico) {
       quitarJugador(socket);

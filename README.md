@@ -127,17 +127,27 @@ PORT=8080 npm start
 │   ├── config/
 │   │   └── preferencias.js Guardado en LocalStorage
 │   ├── motor/
-│   │   ├── escena.js       Escena 3D (Three.js) + jugador + salto + remotos
-│   │   ├── modelos.js      Carga de modelos OBJ/MTL y GLB (con Draco)
-│   │   ├── piramide.js     Pirámide escalonada de cubos (niveles y minas)
-│   │   ├── animaciones.js  Salto (squash & stretch) + AnimationMixer + decorativos
-│   │   ├── hud.js          HUD de partida (clásico y arcade)
-│   │   └── particulas.js   Sistema local de partículas cosméticas
+│   │   ├── escena.js           Escena 3D (Three.js) + jugador + salto + remotos
+│   │   ├── piramide.js         Cubos de pirámide/torre/islas, minas y agua
+│   │   ├── modelos.js          Carga de modelos OBJ/MTL y GLB (con Draco)
+│   │   ├── animaciones.js      Salto (squash & stretch) + AnimationMixer + decorativos
+│   │   ├── hud.js              HUD de partida (clásico y arcade)
+│   │   ├── particulas.js       Sistema local de partículas cosméticas
+│   │   ├── coleccionables.js   Objetos y racha de puntos
+│   │   ├── obstaculos.js       Tortugas bloqueadoras y hierba
+│   │   ├── pato.js             Modelo auxiliar del pato
+│   │   ├── selector-patos.js   Selección de pato
+│   │   ├── nubes.js            Nubes de los escenarios
+│   │   ├── explosion.js        Efecto al perder una vida
+│   │   ├── previews-escenario.js Miniaturas del menú
+│   │   ├── powerups.js         Escudo, pluma e imán
+│   │   ├── pato-menu.js        Pato animado del menú
+│   │   └── sonidos.js          Efectos y música con WebAudio
 │   ├── red/
-│   │   ├── formulario.js   Formulario manual de clasico/arcade
-│   │   ├── perfil.js       Perfil de Facebook y nombre recordado
-│   │   ├── puntuaciones.js Lectura, ranking y envío contra el WebService
-│   │   └── multijugador.js Cliente Socket.IO
+│   │   ├── formulario.js       Formulario manual de clásico/arcade
+│   │   ├── perfil.js           Perfil de Facebook y nombre recordado
+│   │   ├── puntuaciones.js     Lectura, ranking y envío contra el WebService
+│   │   └── multijugador.js     Cliente Socket.IO (salas, batalla y modos)
 │   └── util/
 │       └── navegacion.js   Transición entre vistas
 └── assets/                 Modelos, texturas y audio
@@ -198,20 +208,20 @@ puerto o tiene contraseña.
 
 | Vista | Estado |
 |---|---|
-| Menú inicial | Lista. Jugar, Configuraciones, Puntuaciones, conexión multijugador |
-| Configuraciones | Lista. Volumen, sonido y dificultad compartida (solo cambiable sin jugadores conectados; persisten en LocalStorage) |
-| Puntuaciones | Lista. Formulario para guardar score + tabla desde MySQL |
+| Menú inicial | Listo. Jugar, Configuraciones, Puntuaciones, conexión multijugador, cola de batalla, ranking TOP 10 y login de Facebook |
+| Configuraciones | Listo. Volumen, sonido (WebAudio) y dificultad compartida (solo cambiable sin jugadores conectados; persisten en LocalStorage) |
+| Puntuaciones | Listo. Formulario con pestañas Clásico/Arcade para guardar score y tabla desde MySQL |
 | Pausa | Lista. Reanudar y salir |
-| HUD de juego | Funcional. Indicador de los 3 niveles de juego y contadores de vidas, movimientos, objeto y jugadores |
+| HUD de juego | Funcional. Tres niveles de juego, cronómetro clásico y de arcade, vidas, movimientos, objeto, jugadores, score, racha y barra de Agua en La Pirámide |
 
 ---
 
-## 6. Motor 3D
+## 6. Motor 3D y jugabilidad
 
-`js/motor/escena.js` arma la escena con Three.js (WebGL) en **vista isométrica**: la
-cámara se sitúa en `(14, 14, 14)` y mira al centro de la pirámide (`lookAt(0, 2, 0)`), con
-FOV de `60` para reducir la deformación de perspectiva. La tecla `V` alterna a una vista
-cenital solo para ese cliente (ver sección 15.3).
+**Modo integrado (tres mapas).** `js/motor/escena.js` arma la escena con Three.js (WebGL)
+en **vista isométrica**: la cámara se sitúa en `(14, 14, 14)` y mira al centro de la
+pirámide (`lookAt(0, 2, 0)`), con FOV de `60` para reducir la deformación de perspectiva.
+La tecla `V` alterna a una vista cenital solo para ese cliente (ver sección 15.3).
 
 La escena se compone de:
 
@@ -263,8 +273,50 @@ Si el pato no mira hacia la dirección deseada, primero se pulsa la **tecla de d
 (lo gira) y después **Espacio**; el salto usa la dirección objetivo y puede comenzar antes
 de que termine el giro.
 
-El render solo corre cuando la vista de juego está activa, así que en el menú y durante
-la pausa el bucle se detiene.
+**Escenarios y modos de `main`.** El mismo módulo gestiona el bucle de juego, el pato, la
+cámara, el HUD, los coleccionables y Socket.IO; los escenarios se construyen en
+`js/motor/piramide.js`, los objetos en `js/motor/coleccionables.js`, los obstáculos en
+`js/motor/obstaculos.js` y los efectos en `js/motor/explosion.js` y `nubes.js`.
+
+- **La Pirámide** — 11 niveles, salida en `(0,10)` y victoria al llegar al centro. Un
+  lago azul sólido sube 1 nivel cada 9s en Carrera y cada 6s en Rey; recoger hojas lo
+  baja 1 nivel. Si el agua alcanza al pato se pierde una vida y el agua retrocede 3
+  niveles. La cámara es frontal fija: no se puede volver a la mitad trasera (`z < 0`),
+  pero sí se puede bajar. Entre el 10% y el 28% de los cubos seguros pisados se
+  desprenden poco después según la dificultad; las minas dinámicas avisan naranja → rojo
+  antes de activarse.
+- **Torre** — 14 niveles, cámara orbital y victoria al llegar al centro con la nube
+  invocada. Una base de nivel 1 rodea una escalera de caracol de 14 pasos que sube de
+  1 en 1; el pato arranca en `(3, 0)`. Comparte minas con aviso y cubos que caen con La
+  Pirámide, pero la escalera y el centro están protegidos. Dos trampolines en `(1, 2)` y
+  `(2, -1)` se recargan cada 5s (3s activos, 2s apagados) y permiten un salto de hasta
+  3 niveles.
+- **Islas** — 11 niveles, isla central, dos islas laterales unidas por puentes y la
+  misma condición de victoria que Torre. Los objetos y obstáculos se colocan sobre la
+  elevación del escenario y también aparecen en las islas laterales. Los puentes y los
+  centros nunca reciben minas ni cubos que caen, para no cortar la ruta.
+
+En los 3 escenarios hay **tortugas** que bloquean su celda y patrullan de 2 a 3 casillas
+en eje X, y **hierba** que se consume al pisarla y hace que el siguiente salto dure
+0.75s en vez de 0.45s. Hay 6/10/14 hierbas según dificultad y reaparecen de a 2 cada
+4s. En La Pirámide nunca aparecen en la mitad trasera (`z < 0`). Se ubican sobre la
+tapa del cubo y spawnean cerca de la altura actual del pato. Al bajar de nivel, las
+tortugas invierten su sentido de patrulla.
+
+El salto hacia arriba está limitado a 1 nivel en Pirámide y Torre y a 2 en Islas; las
+bajadas no tienen límite. En la Torre, un trampolín activo eleva el límite a 3 niveles
+para el siguiente salto.
+
+La dificultad (`facil`, `normal`, `dificil`) ajusta en los 3 escenarios la densidad de
+minas estáticas (Pirámide 1.5/3/6%, Torre 3/6/12%, Islas 2.5/5/10%), el intervalo y
+cap de minas dinámicas, la probabilidad de que un cubo pisado se desprenda
+(10/18/28%) y la cantidad de objetos (Pirámide 3/2/1 y Torre/Islas 6/5/4 por
+cuadrante). También cambia el número de tortugas y hierbas.
+
+El modo `carrera` desactiva las minas dinámicas en los 3 escenarios: en La Pirámide el
+reto es el agua que sube y en Torre/Islas, reunir la saciedad con la mayor racha
+posible. El modo `rey` activa minas dinámicas **con aviso** (naranja → rojo) en los 3
+escenarios y eleva la saciedad necesaria en Torre/Islas de 30 a 40.
 
 ### 6.1 Evidencia de rúbrica: colisiones e iluminación
 
@@ -396,8 +448,16 @@ Funciona:
 
 - Transición entre las cinco vistas
 - Preferencias persistentes en LocalStorage
-- WebService PHP/MySQL: guardar y leer puntuaciones
+- WebService PHP/MySQL: guardar y leer puntuaciones, con ranking en el menú
 - Inicio de sesión con Facebook (SDK JS) mostrando nombre y foto del perfil
+- WebAudio con efectos y música generados sin archivos externos, respetando volumen y sonido
+- Tres escenarios con vidas, score, racha, cronómetro, HUD y pantallas de victoria/derrota
+- Menú responsive con ranking móvil de 5 filas y botón "Ver más"
+- La Pirámide: agua que sube, aviso de minas, cubos que caen y cámara/movimiento restringido
+- Tortugas que patrullan y bloquean el paso, y hierba que retrasa el siguiente salto
+- Torre e Islas con la misma dificultad y modos de juego que La Pirámide, minas con aviso y cubos que caen
+- La Torre se sube por una escalera de caracol con trampolines recargables
+- Multijugador global simple y batalla con matchmaking (`BuscarPartida`, `partida-encontrada`, `rival-eliminado`)
 - Vista isométrica con tres mapas de cubos (pirámide, círculo y estrella) y minas (`js/motor/piramide.js`)
 - Carga de modelos 3D (OBJ/MTL y GLB) con `LoadingManager` compartido y soporte Draco
 - Movimiento del jugador por teclado (WASD + flechas) con límites; si no mira, la primera pulsación gira y la segunda mueve
@@ -409,7 +469,7 @@ Funciona:
 - Vidas: 3 por jugador; al llegar a 0 queda como espectador hasta que el nivel avance o todos queden eliminados
 - Reinicio automático: si **todos** los jugadores llegan a 0 vidas, a los 3 s se vuelve al nivel 1 para todos
 - Progresión de niveles: al llegar a la cima `(0,0)` se avanza al siguiente mapa y se reinician vidas, powerups, contador y spawns; al ganar el nivel 3 se vuelve al 1
-- HUD de partida: indicador de los 3 niveles, vidas, movimientos, objeto y avisos de aturdimiento, radar y eliminado
+- HUD de partida: indicador de los 3 niveles, cronómetro clásico, vidas, movimientos, objeto y avisos de aturdimiento, radar y eliminado
 - Vista cenital local con `V`, sin afectar a los demás jugadores (ver sección 15)
 - Salto direccional con animación *squash & stretch* (Espacio, avanza hacia donde mira; si no mira, tecla de dirección + Espacio), validado contra la celda destino y sincronizado en multijugador
 - Iluminación ambiental, direccional y focal (`SpotLight`) con sombras y materiales reactivos
@@ -448,10 +508,7 @@ Funciona:
 
 Pendiente:
 
-- **Cronómetro clásico.** El cronómetro del modo arcade es real; el panel de tiempo del
-  modo clásico sigue mostrando `00:00`. El indicador de niveles sí es dinámico (1–3).
-- **Sonido.** Las preferencias de volumen y sonido se guardan, pero no hay audio que
-  reproducir ni archivos en `assets/audio`.
+- **Control táctil.** El juego se maneja solo con teclado.
 - **Posición de los decorativos.** `escudo` y `radar` quedan medio cuerpo **por debajo**
   del nivel base de la pirámide (`y = -0.5`) porque su malla viene centrada verticalmente.
   Corregir `posicion.y` a `-0.214` y `+0.074` respectivamente (ver sección 12.4).

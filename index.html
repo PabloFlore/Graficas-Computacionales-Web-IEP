@@ -29,49 +29,197 @@
 
   <!-- MENÚ DE INICIO -->
   <section id="vista-menu" class="vista activa">
-    <div class="tarjeta">
-      <div class="marca">
-        <span class="marca__logo">Gráficas Computacionales</span>
+    <button class="boton boton--engranaje" data-vista="vista-configuraciones" title="Configuraciones">⚙</button>
 
-        <!-- Pato despierto: misma estructura que el SVG de pausa pero con ojo abierto -->
-        <svg class="marca__pato" viewBox="0 0 145 125" xmlns="http://www.w3.org/2000/svg">
-          <g stroke="#1f2430" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round">
-            <path d="M17 64 L3 55 Q8 70 3 80 L19 83 Z" fill="#ffd45e" />
-            <ellipse cx="62" cy="76" rx="45" ry="28" fill="#ffd45e" />
-            <path d="M44 68 C58 55 84 59 89 74 C76 87 52 85 44 68 Z" fill="#ffe9a8" />
-            <circle cx="101" cy="42" r="23" fill="#ffd45e" />
-            <path d="M119 36 Q139 34 140 44 Q139 54 119 51 Z" fill="#ff9d3d" />
-            <circle cx="108" cy="38" r="5" fill="#1f2430" />
-            <circle cx="110" cy="36" r="2" fill="#ffffff" />
-          </g>
+    <!-- Facebook en esquina superior izquierda -->
+    <div class="facebook facebook--esquina">
+      <fb:login-button scope="public_profile" onlogin="checkLoginState();" style="display:none;"></fb:login-button>
+      <button class="boton--facebook-esquina" onclick="FB.login(checkLoginState, {scope:'public_profile'})">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047v-2.66c0-3.025 1.791-4.697 4.533-4.697 1.313 0 2.686.236 2.686.236v2.971h-1.513c-1.491 0-1.956.93-1.956 1.886v2.264h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/>
         </svg>
+        Iniciar sesión en Facebook
+      </button>
+      <div id="sesion-facebook" class="sesion-facebook sesion-facebook--menu"></div>
+    </div>
 
-        <h1 class="marca__titulo">Pato a la Cima</h1>
-        <p class="marca__lema">Esquiva las bicicletas y llega antes que los demás.</p>
+    <div class="menu-contenido">
+      <canvas id="pato-menu-canvas" class="marca__pato"></canvas>
+      <h1 class="vista-titulo menu-titulo">Pato a la Cima</h1>
+
+      <div class="multi-opciones">
+        <button class="boton--multi-opcion" data-vista="vista-tipo-juego">
+          <span class="multi-opcion__titulo">Solitario</span>
+          <span class="multi-opcion__sub">Juega solo y sube a la cima</span>
+        </button>
+        <button class="boton--multi-opcion boton--multi-opcion--crear" id="boton-ir-multi">
+          <span class="multi-opcion__titulo">Multijugador</span>
+          <span class="multi-opcion__sub">Búsqueda automática de partida</span>
+        </button>
       </div>
 
-      <button class="boton boton--primario" data-vista="vista-juego" data-modo="clasico">Jugar clásico</button>
-      <button class="boton boton--primario boton--arcade" data-vista="vista-juego" data-modo="arcade">Jugar arcade</button>
-      <button class="boton boton--secundario" data-vista="vista-configuraciones">Configuraciones</button>
-      <button class="boton boton--terciario" data-vista="vista-puntuaciones">Puntuaciones</button>
+      <div class="menu-botones">
+        <button class="boton boton--primario" data-vista="vista-juego" data-modo="clasico">Jugar clásico</button>
+        <button class="boton boton--primario boton--arcade" data-vista="vista-juego" data-modo="arcade">Jugar arcade</button>
+        <button class="boton boton--secundario" data-vista="vista-configuraciones">Configuraciones</button>
+        <button class="boton boton--terciario" data-vista="vista-puntuaciones">Puntuaciones</button>
+      </div>
 
-      <!-- Conexión multijugador -->
       <div class="multijugador">
-        <label class="campo__etiqueta" for="nombre-jugador">Jugador en línea</label>
+        <label class="campo__etiqueta" for="nombre-jugador-menu">Jugador en línea</label>
         <div class="multijugador__fila">
-          <input class="formulario__campo" type="text" id="nombre-jugador" placeholder="Tu nombre" autocomplete="off">
+          <input class="formulario__campo" type="text" id="nombre-jugador-menu" placeholder="Tu nombre" autocomplete="off">
           <button class="boton boton--secundario" id="boton-conectar" type="button">Conectar</button>
         </div>
         <p class="multijugador__estado" id="menu-jugadores">Jugadores activos: 0</p>
         <p class="multijugador__estado" id="menu-jugadores-arcade">Jugadores en arcade: 0</p>
       </div>
+    </div>
 
-      <!-- Inicio de sesión con Facebook (SDK de JavaScript) -->
-      <div class="facebook">
-        <fb:login-button scope="public_profile,email" onlogin="checkLoginState();"></fb:login-button>
-        <div id="sesion-facebook" class="sesion-facebook"></div>
+    <div class="ranking-menu">
+      <p class="ranking-menu__titulo">— TOP 10 —</p>
+      <div class="ranking-menu__tabla">
+        <div class="ranking-menu__cabecera">
+          <span class="ranking__pos">#</span>
+          <span class="ranking__nombre">Jugador</span>
+          <span class="ranking__pts">Pts</span>
+        </div>
+        <ol class="ranking-menu__lista" id="ranking-menu-lista">
+          <li class="ranking-menu__cargando">Cargando...</li>
+        </ol>
+      </div>
+      <button class="ranking-menu__ver-mas" id="ranking-menu-ver-mas">Ver más</button>
+    </div>
+    <span class="marca__logo marca__logo--pie">UANL &nbsp;!&nbsp; LMAD &nbsp;!&nbsp; GRAFICAS COMPUTACIONALES EN WEB</span>
+  </section>
+
+  <!-- TIPO DE JUEGO (solitario) -->
+  <section id="vista-tipo-juego" class="vista">
+    <div class="tipo-juego-tarjeta">
+      <button class="boton--atras" data-vista="vista-menu">←</button>
+      <h2 class="vista-titulo">Tipo de juego</h2>
+      <div class="modos">
+        <button class="boton--modo" data-modo="carrera" data-vista="vista-seleccion">
+          <svg class="modo-icono" width="52" height="48" viewBox="0 0 52 48" fill="none">
+            <rect x="5" y="5" width="3" height="38" rx="1.5" fill="#1f2430"/>
+            <rect x="8"  y="5"  width="8" height="7" fill="#1f2430"/>
+            <rect x="16" y="5"  width="8" height="7" fill="#fff" stroke="#1f2430" stroke-width="1"/>
+            <rect x="24" y="5"  width="8" height="7" fill="#1f2430"/>
+            <rect x="32" y="5"  width="8" height="7" fill="#fff" stroke="#1f2430" stroke-width="1"/>
+            <rect x="8"  y="12" width="8" height="7" fill="#fff" stroke="#1f2430" stroke-width="1"/>
+            <rect x="16" y="12" width="8" height="7" fill="#1f2430"/>
+            <rect x="24" y="12" width="8" height="7" fill="#fff" stroke="#1f2430" stroke-width="1"/>
+            <rect x="32" y="12" width="8" height="7" fill="#1f2430"/>
+            <rect x="8"  y="19" width="8" height="6" fill="#1f2430"/>
+            <rect x="16" y="19" width="8" height="6" fill="#fff" stroke="#1f2430" stroke-width="1"/>
+            <rect x="24" y="19" width="8" height="6" fill="#1f2430"/>
+            <rect x="32" y="19" width="8" height="6" fill="#fff" stroke="#1f2430" stroke-width="1"/>
+          </svg>
+          Carrera
+        </button>
+        <button class="boton--modo" data-modo="rey" data-vista="vista-seleccion">
+          <svg class="modo-icono" width="52" height="58" viewBox="0 0 52 58" fill="none">
+            <g transform="translate(8, -1) scale(1.5)" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z"
+                fill="#ffd45e" stroke="#1f2430" stroke-width="1.2"/>
+              <path d="M5 21h14" stroke="#1f2430" stroke-width="1.2"/>
+            </g>
+            <path d="M26 34 L40 41 L26 48 L12 41 Z" fill="#8fe0b8" stroke="#1f2430" stroke-width="1.5" stroke-linejoin="round"/>
+            <path d="M12 41 L12 50 L26 57 L26 48 Z" fill="#c9885a" stroke="#1f2430" stroke-width="1.5" stroke-linejoin="round"/>
+            <path d="M40 41 L40 50 L26 57 L26 48 Z" fill="#e8a878" stroke="#1f2430" stroke-width="1.5" stroke-linejoin="round"/>
+          </svg>
+          Rey de la cima
+        </button>
       </div>
     </div>
+  </section>
+
+  <!-- SELECCIÓN DE ESCENARIO -->
+  <section id="vista-seleccion" class="vista">
+    <div class="seleccion-tarjeta">
+      <button class="boton--atras" data-vista="vista-tipo-juego">←</button>
+      <h2 class="vista-titulo">Elige un escenario</h2>
+      <div class="escenarios">
+        <button class="tarjeta-escenario tarjeta-escenario--activa" data-escenario="piramide" data-vista="vista-dificultad">
+          <canvas class="tarjeta-escenario__preview" id="preview-piramide"></canvas>
+          <span class="tarjeta-escenario__nombre">La Pirámide</span>
+        </button>
+        <button class="tarjeta-escenario" data-escenario="torre" data-vista="vista-dificultad">
+          <canvas class="tarjeta-escenario__preview" id="preview-torre"></canvas>
+          <span class="tarjeta-escenario__nombre">La Torre</span>
+        </button>
+        <button class="tarjeta-escenario" data-escenario="arena" data-vista="vista-dificultad">
+          <canvas class="tarjeta-escenario__preview" id="preview-arena"></canvas>
+          <span class="tarjeta-escenario__nombre">Las Islas</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- DIFICULTAD -->
+  <section id="vista-dificultad" class="vista">
+    <div class="dificultad-tarjeta">
+      <button class="boton--atras" data-vista="vista-seleccion">←</button>
+      <h2 class="vista-titulo">Dificultad</h2>
+      <div class="dificultades">
+        <button class="boton--dificultad" data-dificultad="facil" data-vista="vista-colores">
+          <div class="dificultad-puntos">
+            <div class="dificultad-punto dificultad-punto--lleno"></div>
+            <div class="dificultad-punto"></div>
+            <div class="dificultad-punto"></div>
+          </div>
+          Fácil
+        </button>
+        <button class="boton--dificultad boton--dificultad--activo" data-dificultad="normal" data-vista="vista-colores">
+          <div class="dificultad-puntos">
+            <div class="dificultad-punto dificultad-punto--lleno"></div>
+            <div class="dificultad-punto dificultad-punto--lleno"></div>
+            <div class="dificultad-punto"></div>
+          </div>
+          Normal
+        </button>
+        <button class="boton--dificultad" data-dificultad="dificil" data-vista="vista-colores">
+          <div class="dificultad-puntos">
+            <div class="dificultad-punto dificultad-punto--lleno"></div>
+            <div class="dificultad-punto dificultad-punto--lleno"></div>
+            <div class="dificultad-punto dificultad-punto--lleno"></div>
+          </div>
+          Difícil
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- SELECCIÓN DE PATO -->
+  <section id="vista-colores" class="vista">
+    <div class="colores-tarjeta">
+      <button class="boton--atras" data-vista="vista-seleccion">←</button>
+      <div class="campo campo--nombre-jugador">
+        <label class="campo__etiqueta" for="nombre-jugador">Tu nombre</label>
+        <input class="formulario__campo" type="text" id="nombre-jugador" placeholder="Escribe tu nombre" autocomplete="off" maxlength="20">
+      </div>
+      <div id="fb-perfil-juego" class="fb-perfil-juego" hidden></div>
+      <h2 class="vista-titulo">Elige tu pato</h2>
+      <div class="selector-patos" id="selector-patos">
+        <div class="pato-card" data-pato="amarillo">
+          <div class="pato-card__lienzo"></div>
+          <span class="pato-card__nombre">Clásico</span>
+        </div>
+        <div class="pato-card" data-pato="blanco">
+          <div class="pato-card__lienzo"></div>
+          <span class="pato-card__nombre">Polar</span>
+        </div>
+        <div class="pato-card" data-pato="negro">
+          <div class="pato-card__lienzo"></div>
+          <span class="pato-card__nombre">Oscuro</span>
+        </div>
+        <div class="pato-card" data-pato="verde">
+          <div class="pato-card__lienzo"></div>
+          <span class="pato-card__nombre">Jungla</span>
+        </div>
+      </div>
+    </div>
+    <button class="boton boton--primario" id="boton-confirmar-color">¡Jugar!</button>
   </section>
 
   <!-- PANTALLA DE JUEGO (HUD) -->
@@ -88,9 +236,21 @@
             </div>
           </div>
 
-          <div class="hud__panel cronometro">
-            <span class="cronometro__tiempo" id="hud-arcade-tiempo">00:00</span>
-            <span class="marcador__texto">Tiempo</span>
+          <div class="hud__flotante">
+            <span class="hud__etiqueta">Nivel</span>
+            <span class="hud__nivel-texto"><span id="hud-nivel-actual">1</span> / <span id="hud-nivel-total">11</span></span>
+          </div>
+
+          <div class="hud__flotante">
+            <span class="hud__etiqueta">Score</span>
+            <span class="hud__valor" id="hud-score">0</span>
+          </div>
+
+          <div class="hud__flotante">
+            <span class="hud__etiqueta">Agua <span id="hud-agua-nivel">0</span>/11</span>
+            <div class="saciedad__barra">
+              <div class="saciedad__relleno" id="hud-saciedad-relleno"></div>
+            </div>
           </div>
 
           <div class="hud__panel hud__panel--arcade">
@@ -133,7 +293,19 @@
           </div>
         </div>
 
-        <button class="boton boton--hud" data-vista="vista-pausa">Pausa</button>
+        <div class="hud__panel cronometro">
+          <span class="cronometro__tiempo" id="hud-arcade-tiempo">00:00</span>
+          <span class="marcador__texto">Tiempo</span>
+        </div>
+
+        <div class="hud__derecha">
+          <div class="corazones">
+            <span class="corazon">&#10084;</span>
+            <span class="corazon">&#10084;</span>
+            <span class="corazon">&#10084;</span>
+          </div>
+          <button class="boton boton--hud" data-vista="vista-pausa">Pausa</button>
+        </div>
       </div>
 
       <div class="hud__estado" id="hud-estado" hidden></div>
@@ -147,64 +319,124 @@
         <span><b>L</b> luz focal</span>
       </div>
     </div>
+    <!-- Game Over overlay -->
+    <div id="game-over" class="game-over oculto">
+      <div class="game-over__tarjeta">
+        <h2 class="game-over__titulo">Game Over</h2>
+        <p class="game-over__linea">Score: <strong id="go-score">0</strong></p>
+        <p class="game-over__linea">Mejor: <strong id="go-mejor">0</strong></p>
+        <button class="boton boton--primario" id="boton-reintentar">Reintentar</button>
+        <button class="boton boton--fantasma" data-vista="vista-menu">Menú</button>
+      </div>
+    </div>
+    <!-- Victoria overlay -->
+    <div id="victoria" hidden>
+      <div class="victoria__tarjeta">
+        <div class="victoria__icono">&#9733;</div>
+        <h2 class="victoria__titulo">¡Llegaste a la cima!</h2>
+        <p class="victoria__dato">Score <strong id="victoria-score">0</strong></p>
+        <p class="victoria__dato">Tiempo <strong id="victoria-tiempo">00:00</strong></p>
+        <p class="victoria__dato victoria__dato--mejor">Mejor <strong id="victoria-mejor">0</strong></p>
+        <div class="victoria__botones">
+          <button class="boton boton--primario" id="btn-victoria-nuevo">Jugar de nuevo</button>
+          <button class="boton boton--fantasma" id="btn-victoria-menu" data-vista="vista-menu">Menú</button>
+        </div>
+      </div>
+    </div>
 
     <div class="fin-partida" id="fin-partida" hidden></div>
   </section>
 
   <!-- MENÚ DE PAUSA -->
   <section id="vista-pausa" class="vista">
-    <div class="tarjeta tarjeta--emergente">
-      <!-- Patito dormido -->
-      <svg class="tarjeta__patito" viewBox="0 0 145 125">
-        <g stroke="#1f2430" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round">
-          <path d="M17 64 L3 55 Q8 70 3 80 L19 83 Z" fill="#ffd45e" />
-          <ellipse cx="62" cy="76" rx="45" ry="28" fill="#ffd45e" />
-          <path d="M44 68 C58 55 84 59 89 74 C76 87 52 85 44 68 Z" fill="#ffe9a8" />
-          <circle cx="101" cy="42" r="23" fill="#ffd45e" />
-          <path d="M119 36 Q139 34 140 44 Q139 54 119 51 Z" fill="#ff9d3d" />
-          <path d="M98 36 Q104 41 110 36" fill="none" />
-        </g>
-      </svg>
-
-      <h2 class="tarjeta__titulo">Pausa</h2>
-      <p class="tarjeta__nota">El pato toma aire.</p>
-
-      <button class="boton boton--primario" data-vista="vista-juego">Reanudar</button>
-      <button class="boton boton--peligro" data-vista="vista-menu">Salir</button>
+    <div class="pausa-tarjeta">
+      <!-- Panel: opciones principales -->
+      <div class="pausa-panel pausa-panel--menu">
+        <h2 class="vista-titulo">Pausa</h2>
+        <button class="boton boton--primario" data-vista="vista-juego">Reanudar</button>
+        <button class="boton boton--fantasma" id="pausa-btn-config">Configuración</button>
+        <button class="boton boton--peligro" data-vista="vista-menu">Salir</button>
+      </div>
+      <!-- Panel: configuraciones dentro de pausa -->
+      <div class="pausa-panel pausa-panel--config" hidden>
+        <button class="boton--atras" id="pausa-btn-volver">←</button>
+        <h2 class="vista-titulo">Configuraciones</h2>
+        <div class="cfg-campos">
+          <div class="cfg-campo">
+            <label class="cfg-label" for="pausa-cfg-volumen">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <path d="M11 5 L6 9 H2 V15 H6 L11 19 V5Z" fill="white"/>
+                <path d="M15.54 8.46a5 5 0 0 1 0 7.07" stroke="white" stroke-width="2" stroke-linecap="round"/>
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14" stroke="white" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              Volumen
+            </label>
+            <input class="cfg-slider" type="range" id="pausa-cfg-volumen" min="0" max="100" value="80">
+          </div>
+          <div class="cfg-campo">
+            <label class="cfg-label" for="pausa-cfg-sonido">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <path d="M11 5 L6 9 H2 V15 H6 L11 19 V5Z" fill="white"/>
+                <path d="M15.54 8.46a5 5 0 0 1 0 7.07" stroke="white" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              Sonido
+            </label>
+            <label class="cfg-toggle">
+              <input type="checkbox" id="pausa-cfg-sonido" checked>
+              <span class="cfg-toggle__track"></span>
+            </label>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
   <!-- CONFIGURACIONES -->
   <section id="vista-configuraciones" class="vista">
-    <div class="tarjeta">
-      <h2 class="tarjeta__titulo">Configuraciones</h2>
-      <p class="tarjeta__nota">Tus ajustes se guardan en este navegador.</p>
-
-      <div class="campos">
-        <div class="campo">
-          <label class="campo__etiqueta" for="cfg-volumen">Volumen</label>
-          <div class="campo__control">
-            <span class="campo__icono">🔊</span>
-            <input type="range" id="cfg-volumen" min="0" max="100">
-          </div>
+    <div class="configuraciones-tarjeta">
+      <button class="boton--cerrar" data-cerrar-overlay title="Cerrar">
+        <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+          <circle cx="18" cy="18" r="18" fill="#c0392b"/>
+          <circle cx="18" cy="18" r="16" fill="#e74c3c"/>
+          <path d="M12 12 L24 24 M24 12 L12 24" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <h2 class="vista-titulo">Configuraciones</h2>
+      <div class="cfg-campos">
+        <div class="cfg-campo">
+          <label class="cfg-label" for="cfg-volumen">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <path d="M11 5 L6 9 H2 V15 H6 L11 19 V5Z" fill="white"/>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07" stroke="white" stroke-width="2" stroke-linecap="round"/>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14" stroke="white" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            Volumen
+          </label>
+          <input class="cfg-slider" type="range" id="cfg-volumen" min="0" max="100" value="80">
         </div>
-
-        <div class="campo">
-          <label class="campo__etiqueta" for="cfg-sonido">Sonido</label>
-          <input type="checkbox" id="cfg-sonido">
+        <div class="cfg-campo">
+          <label class="cfg-label" for="cfg-sonido">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <path d="M11 5 L6 9 H2 V15 H6 L11 19 V5Z" fill="white"/>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07" stroke="white" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            Sonido
+          </label>
+          <label class="cfg-toggle">
+            <input type="checkbox" id="cfg-sonido" checked>
+            <span class="cfg-toggle__track"></span>
+          </label>
         </div>
-
-        <div class="campo">
-          <label class="campo__etiqueta" for="cfg-dificultad">Dificultad</label>
-          <select id="cfg-dificultad">
+        <div class="cfg-campo">
+          <span class="cfg-label">Dificultad</span>
+          <select id="cfg-dificultad" aria-label="Dificultad">
             <option value="facil">Fácil</option>
             <option value="normal">Normal</option>
             <option value="dificil">Difícil</option>
           </select>
-          <p class="campo__nota" id="cfg-dificultad-nota" hidden>No se puede cambiar mientras hay jugadores conectados.</p>
         </div>
+        <p class="campo__nota" id="cfg-dificultad-nota" hidden>No se puede cambiar mientras hay jugadores conectados.</p>
       </div>
-
       <button class="boton boton--fantasma" data-vista="vista-menu">Volver</button>
     </div>
   </section>
@@ -264,6 +496,32 @@
     </div>
   </section>
 
+
+  <!-- ── MULTIJUGADOR: NOMBRE ──────────────────────────────────── -->
+  <section id="vista-multi-nombre" class="vista">
+    <div class="vista-contenido">
+      <button class="boton--atras" data-vista="vista-menu">←</button>
+      <h2 class="vista-titulo">Multijugador</h2>
+      <input class="formulario__campo input-nombre-multi" type="text" id="nombre-multi-lobby"
+             placeholder="Tu nombre de jugador" autocomplete="off" maxlength="20">
+      <button class="boton boton--continuar" id="boton-multi-nombre">Continuar →</button>
+    </div>
+  </section>
+
+  <!-- ── MULTIJUGADOR: ESPERANDO ────────────────────────────────── -->
+  <section id="vista-multi-espera" class="vista">
+    <div class="multi-espera">
+      <h2 class="multi-espera__titulo">Buscando partida</h2>
+      <div class="multi-espera__dots">
+        <span class="multi-espera__dot"></span>
+        <span class="multi-espera__dot"></span>
+        <span class="multi-espera__dot"></span>
+      </div>
+      <p class="multi-espera__sub">Esperando otro jugador...</p>
+      <button class="boton boton--fantasma" id="boton-cancelar-multi">Cancelar</button>
+    </div>
+  </section>
+
   <!-- Cliente Socket.IO (define el global `io`) -->
   <script src="/socket.io/socket.io.js"></script>
 
@@ -273,7 +531,7 @@
   <script>
     window.fbAsyncInit = function () {
       FB.init({
-        appId: '1664395638440492',
+        appId: '1090045887252837',
         cookie: true,
         xfbml: true,
         version: 'v26.0'
@@ -286,6 +544,12 @@
       if (typeof FB.XFBML !== 'undefined' && typeof FB.XFBML.parse === 'function') {
         FB.XFBML.parse();
       }
+
+      FB.getLoginStatus(function (response) {
+        if (response.status === 'connected') {
+          FB.api('/me', { fields: 'id,name,picture' }, mostrarSesionFacebook);
+        }
+      });
     };
 
     (function (d, s, id) {
@@ -296,45 +560,62 @@
       fjs.parentNode.insertBefore(js, fjs);
     }(document, 'script', 'facebook-jssdk'));
 
-    function checkLoginState() {
-      FB.api('/me', { fields: 'id,name,picture' }, function (response) {
-        mostrarSesionFacebook(response);
-      });
+    function checkLoginState(loginResponse) {
+      var status = loginResponse && loginResponse.status;
+      if (status === 'connected') {
+        FB.api('/me', { fields: 'id,name,picture' }, mostrarSesionFacebook);
+      } else {
+        mostrarSesionFacebook(null);
+      }
     }
 
     function mostrarSesionFacebook(response) {
       var contenedor = document.getElementById('sesion-facebook');
-      if (!contenedor) {
-        return;
-      }
+      var campoNombre = document.querySelector('.campo--nombre-jugador');
+      var perfilJuego = document.getElementById('fb-perfil-juego');
+      var inputNombre = document.getElementById('nombre-jugador');
 
-      contenedor.innerHTML = '';
+      if (contenedor) contenedor.innerHTML = '';
 
       if (!response || response.error) {
-        var error = document.createElement('p');
-        error.className = 'sesion-facebook__error';
-        error.textContent = 'No se pudo obtener el perfil de Facebook.';
-        contenedor.appendChild(error);
+        if (campoNombre) campoNombre.style.display = '';
+        if (perfilJuego) {
+          perfilJuego.style.display = 'none';
+          perfilJuego.hidden = true;
+          perfilJuego.innerHTML = '';
+        }
+        if (inputNombre) inputNombre.value = '';
+        if (contenedor) {
+          var error = document.createElement('p');
+          error.className = 'sesion-facebook__error';
+          error.textContent = 'No se pudo obtener el perfil de Facebook.';
+          contenedor.appendChild(error);
+        }
         return;
       }
 
       var foto = response.picture && response.picture.data ? response.picture.data.url : '';
-      if (foto) {
-        var img = document.createElement('img');
-        img.className = 'sesion-facebook__foto';
-        img.src = foto;
-        img.alt = response.name || 'Usuario de Facebook';
-        contenedor.appendChild(img);
-      }
+      var nombreTexto = response.name || '';
+      window.fbNombreJugador = nombreTexto;
 
-      var nombre = document.createElement('span');
-      nombre.className = 'sesion-facebook__nombre';
-      nombre.textContent = response.name || '';
-      contenedor.appendChild(nombre);
+      // Menú principal
+      if (contenedor) {
+        if (foto) {
+          var img = document.createElement('img');
+          img.className = 'sesion-facebook__foto';
+          img.src = foto;
+          img.alt = nombreTexto;
+          contenedor.appendChild(img);
+        }
+        var span = document.createElement('span');
+        span.className = 'sesion-facebook__nombre';
+        span.textContent = nombreTexto;
+        contenedor.appendChild(span);
+      }
 
       var perfil = {
         id: response.id || null,
-        nombre: response.name || '',
+        nombre: nombreTexto,
         foto: foto || null
       };
 
@@ -342,10 +623,28 @@
         try {
           localStorage.setItem('gcw.perfil', JSON.stringify(perfil));
         } catch (error) {
-          // Sin localStorage el perfil solo se usa en esta sesion.
+          window.fbPerfilSinStorage = perfil;
         }
-
         window.dispatchEvent(new CustomEvent('perfil-facebook', { detail: perfil }));
+      }
+
+      if (campoNombre) campoNombre.style.display = 'none';
+      if (inputNombre) inputNombre.value = nombreTexto;
+      if (perfilJuego) {
+        perfilJuego.innerHTML = '';
+        perfilJuego.hidden = false;
+        perfilJuego.style.display = 'flex';
+        if (foto) {
+          var fotoPerfil = document.createElement('img');
+          fotoPerfil.className = 'fb-perfil-juego__foto';
+          fotoPerfil.src = foto;
+          fotoPerfil.alt = nombreTexto;
+          perfilJuego.appendChild(fotoPerfil);
+        }
+        var nombrePerfil = document.createElement('span');
+        nombrePerfil.className = 'fb-perfil-juego__nombre';
+        nombrePerfil.textContent = nombreTexto;
+        perfilJuego.appendChild(nombrePerfil);
       }
     }
 
