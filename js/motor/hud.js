@@ -91,11 +91,19 @@ export function pintarHud({
   }
 }
 
-function formatearTiempo(segundos) {
-  const total = Math.max(0, Math.ceil(Number(segundos) || 0));
+function formatearTiempo(segundos, redondear = Math.ceil) {
+  const total = Math.max(0, redondear(Number(segundos) || 0));
   const minutos = Math.floor(total / 60);
   const resto = total % 60;
   return `${String(minutos).padStart(2, '0')}:${String(resto).padStart(2, '0')}`;
+}
+
+/**
+ * Cronómetro ascendente del modo clásico: usa el mismo panel de tiempo que el
+ * arcade, pero cuenta hacia arriba y muestra 00:00 al empezar.
+ */
+export function pintarCronometroClasico(segundos) {
+  fijarTexto('hud-arcade-tiempo', formatearTiempo(segundos, Math.floor));
 }
 
 /**

@@ -20,7 +20,13 @@ import {
 } from './piramide.js';
 import { crearSalto, crearMezclador, crearRebote, crearGiro, crearBarrido } from './animaciones.js';
 import { crearParticulas } from './particulas.js';
-import { pintarHud, pintarHudArcade, mostrarFinPartida, ocultarFinPartida } from './hud.js';
+import {
+  pintarHud,
+  pintarHudArcade,
+  pintarCronometroClasico,
+  mostrarFinPartida,
+  ocultarFinPartida
+} from './hud.js';
 
 const MODELOS = [
   {
@@ -164,6 +170,8 @@ export async function iniciarEscena({
   const CUENTA_ARCADE = 3;
   const REINICIO_ARCADE = 5;
   let tiempoJuego = 0;
+  let tiempoClasico = 0;
+  let segundoClasicoPintado = -1;
   let inventario = null;
   let movimientos = 0;
   let vidas = VIDAS_INICIALES;
@@ -224,6 +232,25 @@ export async function iniciarEscena({
         cubo.tipoVisible = visible;
       }
     });
+  }
+
+  function reiniciarCronometroClasico() {
+    tiempoClasico = 0;
+    segundoClasicoPintado = -1;
+    pintarCronometroClasico(0);
+  }
+
+  function actualizarCronometroClasico(delta) {
+    if (modoActual !== MODOS.clasico) {
+      return;
+    }
+
+    tiempoClasico += delta;
+    const segundo = Math.floor(tiempoClasico);
+    if (segundo !== segundoClasicoPintado) {
+      segundoClasicoPintado = segundo;
+      pintarCronometroClasico(segundo);
+    }
   }
 
   function actualizarHud() {
@@ -1077,8 +1104,9 @@ export async function iniciarEscena({
 
     if (vistaJuego.classList.contains('activa')) {
       // El tiempo de juego solo avanza con la vista activa: la pausa congela
-      // el aturdimiento y el radar.
+      // el aturdimiento y el radar. El cronómetro clásico va a la par.
       tiempoJuego += delta;
+      actualizarCronometroClasico(delta);
 
       if (finPartidaHasta > 0 && tiempoJuego >= finPartidaHasta) {
         finPartidaHasta = 0;
@@ -1932,6 +1960,9 @@ export async function iniciarEscena({
       actualizarClaseModo();
       if (reiniciar && modoActual === MODOS.arcade) {
         iniciarArcadeLocal();
+      } else if (reiniciar && modoActual === MODOS.clasico) {
+        reiniciarCronometroClasico();
+        actualizarHud();
       }
       return;
     }
@@ -1988,6 +2019,7 @@ export async function iniciarEscena({
     if (arcade) {
       iniciarArcadeLocal();
     } else {
+      reiniciarCronometroClasico();
       arcadeServidorActivo = false;
       arcadeEstado = 'espera';
       arcadeRestante = DURACION_ARCADE;
